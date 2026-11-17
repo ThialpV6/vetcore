@@ -1,4 +1,5 @@
 {
+  "id": "/vetpocket/",
   "name": "VetPocket — Sistema Clínico Veterinário",
   "short_name": "VetPocket",
   "description": "Prontuário inteligente, bulário e calculadora de emergências veterinárias para pets e animais silvestres.",
@@ -8,12 +9,22 @@
   "background_color": "#11111b",
   "theme_color": "#11111b",
   "orientation": "portrait-primary",
+  "categories": ["medical", "health", "reference"],
   "icons": [
     {
       "src": "./icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Prontuário Clínico e Calculadora VetPocket"
     }
   ]
 }
