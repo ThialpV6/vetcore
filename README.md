@@ -1,6 +1,6 @@
 # 🐾 VetPocket — Sistema Clínico, Farmacológico e de Emergências Veterinárias
 
-> **Aplicativo de bolso e prontuário inteligente para tomada de decisão rápida em Clínica Médica, Cirúrgica e Emergências de Animais Silvestres, Exóticos e Pets (Cães e Gatos).**
+> **Aplicativo de bolso e prontuário inteligente para tomada de decisão rápida em Clínica Médica, Cirúrgica e Emergências de Animais Silvestres, Exóticos, cães e gatos.**
 
 🔗 **Acesse o WebApp:** [https://thialpv6.github.io/vetpocket/](https://thialpv6.github.io/vetpocket/)
 
