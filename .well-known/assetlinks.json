@@ -1,8 +1,0 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "io.github.thialpv6.twa",
-        "sha256_cert_fingerprints": ["2C:67:D9:F3:18:B2:B8:E5:2A:7C:85:29:07:4D:F2:D4:1C:43:B4:BF:05:B3:4B:8F:F3:00:1A:0C:19:1A:70:C0"]
-      }
-    }]
