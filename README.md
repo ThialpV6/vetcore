@@ -1,14 +1,12 @@
-# 🐾 VetPocket — Sistema Clínico, Farmacológico e de Emergências Veterinárias
+# VetCore — Sistema Clínico, Farmacológico e de Emergências Veterinárias
 
 > **Aplicativo de bolso e prontuário inteligente para tomada de decisão rápida em Clínica Médica, Cirúrgica e Emergências de Animais Silvestres, Exóticos, cães e gatos.**
-
-🔗 **Acesse o WebApp:** [https://thialpv6.github.io/vetpocket/](https://thialpv6.github.io/vetpocket/)
 
 ---
 
 ## 🎯 Sobre o Projeto
 
-O **VetPocket** foi desenvolvido para eliminar erros de cálculo posológico, interações medicamentosas fatais e atrasos de conduta durante plantões e atendimentos de emergência. O sistema integra um banco de dados clínico auditado a calculadoras dinâmicas que ajustam automaticamente doses, diluições decimais e restrições biológicas de acordo com a fisiologia de cada táxon.
+O **VetCore** foi desenvolvido para eliminar erros de cálculo posológico, interações medicamentosas fatais e atrasos de conduta durante plantões e atendimentos de emergência. O sistema integra um banco de dados clínico auditado a calculadoras dinâmicas que ajustam automaticamente doses, diluições decimais e restrições biológicas de acordo com a fisiologia de cada táxon.
 
 ---
 
