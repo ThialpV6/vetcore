@@ -181,6 +181,179 @@
             <div><label class="text-[10px] text-slate-400 uppercase">TPC (seg)</label><input id="p-tpc" type="text" placeholder="Ex: < 2s" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white"></div>
           </div>
           <textarea id="p-exame-fisico" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 outline-none" placeholder="Alterações no exame físico segmentar (ausculta cardiopulmonar, palpação abdominal/celômica, lesões tegumentares, linfonodos, exame neurológico/oftálmico)..."></textarea>
+          <!-- ESCALAS CLÍNICAS INTERATIVAS (MCGS / FGS / CMPS-SF) -->
+          <details id="box-escalas-clinicas" class="rounded-xl bg-slate-950/90 border border-slate-800 text-xs">
+            <summary class="p-2.5 font-bold text-blue-300 cursor-pointer select-none flex items-center justify-between">
+              <span>📊 Escalas Clínicas: Glasgow (TCE) &amp; Dor (FGS / CMPS-SF)</span>
+              <span class="text-[10px] text-slate-400 font-normal">Abrir ▾</span>
+            </summary>
+            <div class="p-3 pt-2 border-t border-slate-800 space-y-3">
+              <div class="flex flex-wrap gap-1.5">
+                <button type="button" id="btn-esc-mcgs" onclick="alternarAbaEscala('mcgs')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-blue-600 text-white">🧠 Glasgow (TCE)</button>
+                <button type="button" id="btn-esc-fgs" onclick="alternarAbaEscala('fgs')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-900 text-slate-300 border border-slate-700">🐱 Dor Gatos (FGS)</button>
+                <button type="button" id="btn-esc-cmps" onclick="alternarAbaEscala('cmps')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-900 text-slate-300 border border-slate-700">🐶 Dor Cães (Glasgow)</button>
+              </div>
+
+              <!-- 1. ESCALA DE COMA DE GLASGOW MODIFICADA (MCGS: 3 a 18) -->
+              <div id="painel-esc-mcgs" class="space-y-2.5">
+                <div id="alerta-mcgs-especie" class="hidden p-2 rounded-lg bg-amber-950/70 border border-amber-700/60 text-[11px] text-amber-200"></div>
+                <div class="space-y-2">
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">1. Atividade Motora (1–6)</label>
+                    <select id="mcgs-motora" onchange="calcularMCGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="6">6 — Marcha e reflexos espinhais normais</option>
+                      <option value="5">5 — Hemiparesia, tetraparesia ou descerebração intermitente</option>
+                      <option value="4">4 — Decúbito, rigidez extensora intermitente</option>
+                      <option value="3">3 — Decúbito, rigidez extensora constante</option>
+                      <option value="2">2 — Decúbito, rigidez extensora constante + opistótono</option>
+                      <option value="1">1 — Decúbito, hipotonia e reflexos deprimidos/ausentes</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">2. Reflexos de Tronco Encefálico (1–6)</label>
+                    <select id="mcgs-tronco" onchange="calcularMCGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="6">6 — RPL e oculocefálico normais</option>
+                      <option value="5">5 — RPL lento; oculocefálico normal a reduzido</option>
+                      <option value="4">4 — Miose bilateral; oculocefálico reduzido a ausente</option>
+                      <option value="3">3 — Pupilas puntiformes; oculocefálico reduzido a ausente</option>
+                      <option value="2">2 — Midríase unilateral não responsiva; oculocefálico ausente</option>
+                      <option value="1">1 — Midríase bilateral não responsiva; oculocefálico ausente</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">3. Nível de Consciência (1–6)</label>
+                    <select id="mcgs-consc" onchange="calcularMCGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="6">6 — Alerta, períodos ocasionais de depressão</option>
+                      <option value="5">5 — Depressão ou delírio, responde ao ambiente</option>
+                      <option value="4">4 — Estupor (semicomatoso), responde a estímulo visual</option>
+                      <option value="3">3 — Estupor (semicomatoso), responde a estímulo auditivo</option>
+                      <option value="2">2 — Estupor, responde apenas a estímulos nociceptivos repetidos</option>
+                      <option value="1">1 — Comatoso, não responsivo a estímulos nociceptivos</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="out-esc-mcgs" class="p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-xs"></div>
+                <button type="button" onclick="inserirEscalaNoExame('mcgs')" class="w-full py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs">➕ Inserir Escore MCGS no Exame Físico</button>
+              </div>
+
+              <!-- 2. FELINE GRIMACE SCALE (FGS: 0 a 10 | Corte >= 4) -->
+              <div id="painel-esc-fgs" class="hidden space-y-2.5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Orelhas</label>
+                    <select id="fgs-orelhas" onchange="calcularFGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="0">0 — Voltadas para frente</option>
+                      <option value="1">1 — Ligeiramente afastadas</option>
+                      <option value="2">2 — Achatadas e rotacionadas p/ fora</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Aperto Orbital (Olhos)</label>
+                    <select id="fgs-olhos" onchange="calcularFGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="0">0 — Abertos</option>
+                      <option value="1">1 — Parcialmente fechados</option>
+                      <option value="2">2 — Apertados / semicerrados</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Tensão do Focinho</label>
+                    <select id="fgs-focinho" onchange="calcularFGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="0">0 — Relaxado (formato redondo)</option>
+                      <option value="1">1 — Levemente tenso</option>
+                      <option value="2">2 — Tenso (formato elíptico)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Posição dos Bigodes</label>
+                    <select id="fgs-bigodes" onchange="calcularFGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="0">0 — Soltos e curvados</option>
+                      <option value="1">1 — Levemente curvados ou retos</option>
+                      <option value="2">2 — Retos e projetados para frente</option>
+                    </select>
+                  </div>
+                  <div class="sm:col-span-2">
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Posição da Cabeça</label>
+                    <select id="fgs-cabeca" onchange="calcularFGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="0">0 — Acima da linha dos ombros</option>
+                      <option value="1">1 — Alinhada com os ombros</option>
+                      <option value="2">2 — Abaixo dos ombros ou queixo no peito</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="out-esc-fgs" class="p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-xs"></div>
+                <button type="button" onclick="inserirEscalaNoExame('fgs')" class="w-full py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs">➕ Inserir Escore FGS no Exame Físico</button>
+              </div>
+
+              <!-- 3. GLASGOW CURTA DE DOR EM CÃES (CMPS-SF: 0 a 24 | Corte >= 6/24 ou >= 5/20) -->
+              <div id="painel-esc-cmps" class="hidden space-y-2.5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Vocalização (0–3)</label>
+                    <select id="cmps-voc" onchange="calcularCMPS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="0">0 — Quieto</option>
+                      <option value="1">1 — Choramingando / gemendo</option>
+                      <option value="2">2 — Gemido forte</option>
+                      <option value="3">3 — Gritando / uivando</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Atenção à Ferida (0–4)</label>
+                    <select id="cmps-ferida" onchange="calcularCMPS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="0">0 — Ignora a área dolorosa</option>
+                      <option value="1">1 — Olhando para a ferida</option>
+                      <option value="2">2 — Lambendo a ferida</option>
+                      <option value="3">3 — Esfregando a ferida</option>
+                      <option value="4">4 — Mordendo a ferida</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Resposta à Palpação Suave (0–5)</label>
+                    <select id="cmps-palp" onchange="calcularCMPS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="0">0 — Sem reação</option>
+                      <option value="1">1 — Olha ao redor / tenciona</option>
+                      <option value="2">2 — Recua / encolhe</option>
+                      <option value="3">3 — Rosna ou protege o local</option>
+                      <option value="4">4 — Tenta morder</option>
+                      <option value="5">5 — Grita / chora à palpação</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Postura &amp; Conforto (0–4)</label>
+                    <select id="cmps-post" onchange="calcularCMPS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="0">0 — Confortável / relaxado</option>
+                      <option value="1">1 — Inquieto</option>
+                      <option value="2">2 — Rígido</option>
+                      <option value="3">3 — Arqueado / tenso</option>
+                      <option value="4">4 — Sem posição confortável / agitado</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Comportamento Geral (0–4)</label>
+                    <select id="cmps-comp" onchange="calcularCMPS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="0">0 — Alegre / contente / interessado</option>
+                      <option value="1">1 — Quieto</option>
+                      <option value="2">2 — Indiferente ao ambiente</option>
+                      <option value="3">3 — Nervoso / ansioso / medroso</option>
+                      <option value="4">4 — Deprimido / não responsivo</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Mobilidade (Opcional: 0–4)</label>
+                    <select id="cmps-mob" onchange="calcularCMPS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                      <option value="-1">Não avaliada (Paciente em decúbito/fratura — teto 20)</option>
+                      <option value="0">0 — Normal</option>
+                      <option value="1">1 — Claudicante</option>
+                      <option value="2">2 — Lento ou relutante ao levantar</option>
+                      <option value="3">3 — Rígido</option>
+                      <option value="4">4 — Recusa-se a mover</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="out-esc-cmps" class="p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-xs"></div>
+                <button type="button" onclick="inserirEscalaNoExame('cmps')" class="w-full py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs">➕ Inserir Escore CMPS-SF no Exame Físico</button>
+              </div>
+            </div>
+          </details>
         </div>
 
         <!-- 4. EXAMES COMPLEMENTARES & 5. DIAGNÓSTICO / SUSPEITA + CRUZAMENTO IA -->
@@ -231,6 +404,13 @@
         </div>
 
       </div>
+      
+      <!-- FILTRO RÁPIDO E BUSCA DE FÁRMACOS NA PRESCRIÇÃO -->
+          <div class="space-y-2">
+            <input id="busca-prescricao" type="text" oninput="renderListaPrescricaoFiltrada()" placeholder="🔍 Filtrar fármaco ou comercial (ex: Dipirona, Synulox, Pentabiótico)..." class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs text-white outline-none">
+            <div id="filtros-prescricao" class="flex flex-wrap gap-1.5"></div>
+            <div id="cont-prescricao" class="text-[10px] text-slate-400"></div>
+          </div>
 
       <!-- COLUNA DIREITA: PRESCRIÇÃO CALCULADA + LINHA DO TEMPO DO PACIENTE -->
       <div class="lg:col-span-6 space-y-3.5">

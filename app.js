@@ -2075,3 +2075,292 @@ baixarDadosDaNuvemGoogle = async function(uid) {
     }
   } catch (e) {}
 };
+// ============================================================================
+// MELHORIAS CLÍNICAS: FILTRO DE PRESCRIÇÃO + ESCALAS (MCGS, FGS, CMPS-SF)
+// ============================================================================
+
+const CATEGORIAS_FARMACOS = {
+  "Amoxicilina+Clav": ["atb"],
+  "Clindamicina": ["atb"],
+  "Enrofloxacina": ["atb"],
+  "Marbofloxacina": ["atb"],
+  "Ceftazidima": ["atb"],
+  "Doxiciclina": ["atb"],
+  "Metronidazol": ["atb", "gi"],
+  "Sulfametoxazol+Trim": ["atb"],
+  "Cefalexina": ["atb"],
+  "Pentabiotico": ["atb"],
+  "Dipirona": ["dor"],
+  "Meloxicam": ["dor"],
+  "Carprofeno": ["dor"],
+  "Robenacoxibe": ["dor"],
+  "Tramadol": ["dor"],
+  "Gabapentina": ["dor", "sedacao"],
+  "Butorfanol": ["dor", "sedacao"],
+  "Metadona": ["dor", "sedacao"],
+  "Prednisolona": ["dor", "outros"],
+  "Dexametasona": ["dor", "outros"],
+  "Lidocaina 2%": ["dor", "sedacao"],
+  "Bupivacaina 0,5%": ["dor", "sedacao"],
+  "Escopolamina": ["dor", "gi"],
+  "Midazolam": ["sedacao"],
+  "Cetamina": ["sedacao", "dor"],
+  "Furosemida": ["sedacao", "outros"],
+  "Manitol 20%": ["sedacao", "outros"],
+  "Vitamina K1": ["sedacao", "outros"],
+  "Maropitant": ["gi"],
+  "Ondansetrona": ["gi"],
+  "Metoclopramida": ["gi"],
+  "Omeprazol": ["gi"],
+  "Sucralfato": ["gi"],
+  "Itraconazol": ["gi", "outros"],
+  "Alopurinol": ["outros"],
+  "Ivermectina": ["outros"],
+  "Fenbendazol": ["outros"],
+  "Nitenpiram": ["outros"]
+};
+
+let filtroPrescAtivo = "todos";
+
+function normalizarTextoBusca(str) {
+  return (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function setFiltroPrescricao(cat) {
+  filtroPrescAtivo = cat;
+  renderListaPrescricaoFiltrada();
+}
+
+function renderListaPrescricaoFiltrada() {
+  const listaEl = document.getElementById("lista-prescricao");
+  const barFiltros = document.getElementById("filtros-prescricao");
+  const contEl = document.getElementById("cont-prescricao");
+  if (!listaEl) return;
+
+  const { idx: tIdx, t } = getTaxonAtual();
+  const kgCalc = getPesoEfetivoKg();
+  const des = parseFloat(document.getElementById("p-des")?.value) || 0;
+  const termo = normalizarTextoBusca(document.getElementById("busca-prescricao")?.value || "");
+
+  let focoDrogas = new Set();
+  let bloqMelox = des >= 8;
+  Array.from(sinaisAtivos).forEach(k => {
+    const s = SINAIS_DB[k];
+    if (!s) return;
+    (s.focoDrogas || []).forEach(d => focoDrogas.add(d));
+    if (s.bloqueiaMelox) bloqMelox = true;
+  });
+
+  if (barFiltros) {
+    const botoes = [
+      ["todos", "Todos"],
+      ["caso", `★ Do Caso (${focoDrogas.size})`],
+      ["atb", "🦠 ATB"],
+      ["dor", "💊 Dor/AINE"],
+      ["sedacao", "💉 Sedação/Emerg"],
+      ["gi", "🤢 GI/Antifúng."],
+      ["outros", "📦 Outros"]
+    ];
+    barFiltros.innerHTML = botoes.map(([id, label]) => {
+      const ativo = filtroPrescAtivo === id;
+      const cls = ativo
+        ? "px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 text-white border border-emerald-400"
+        : "px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-950 text-slate-300 border border-slate-800 hover:border-slate-600";
+      return `<button type="button" onclick="setFiltroPrescricao('${id}')" class="${cls}">${label}</button>`;
+    }).join("");
+  }
+
+  const filtrados = FARMACOS_DB.filter(f => {
+    const cats = CATEGORIAS_FARMACOS[f.id] || ["outros"];
+    const passaCat =
+      filtroPrescAtivo === "todos" ||
+      (filtroPrescAtivo === "caso" ? focoDrogas.has(f.id) : cats.includes(filtroPrescAtivo));
+    if (!passaCat) return false;
+    if (!termo) return true;
+    return normalizarTextoBusca(f.nome + " " + f.comercial + " " + f.id).includes(termo);
+  });
+
+  if (contEl) {
+    contEl.textContent = `Exibindo ${filtrados.length} de ${FARMACOS_DB.length} fármacos`;
+  }
+
+  if (filtrados.length === 0) {
+    listaEl.innerHTML = `<div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 text-center">Nenhum fármaco encontrado para este filtro.${filtroPrescAtivo === "caso" ? " Selecione achados na Anamnese ou clique em 'Todos'." : ""}</div>`;
+    return;
+  }
+
+  listaEl.innerHTML = filtrados.map(f => {
+    const fIdx = FARMACOS_DB.indexOf(f);
+    const { doseAtiva, concAtiva, grupoCfg } = getConfigFarmacoParaTaxon(f, tIdx, t);
+    const isFoco = focoDrogas.has(f.id);
+    const isUI = f.id === "Pentabiotico";
+    const uDose = isUI ? "UI/kg" : "mg/kg";
+    const uTot  = isUI ? "UI" : "mg";
+    const uConc = isUI ? "UI/mL" : "mg/mL";
+
+    if (doseAtiva === 0 || grupoCfg.status === "proibido") {
+      return `<div onclick="abrirModalFarmaco(${fIdx})" class="p-3 rounded-xl bg-rose-950/30 border border-rose-800/60 flex justify-between items-center cursor-pointer">
+        <div>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">${grupoCfg.badge}</span>
+          <div class="text-xs font-bold text-rose-200 mt-1">${f.nome}</div>
+          <div class="text-[11px] text-rose-300/80">${grupoCfg.via}</div>
+        </div>
+        <span class="text-xs font-bold text-rose-400 underline shrink-0 ml-2">📖 Fonte</span>
+      </div>`;
+    }
+
+    if (f.id === "Meloxicam" && bloqMelox) {
+      return `<div onclick="abrirModalFarmaco(${fIdx})" class="p-3 rounded-xl bg-amber-950/30 border border-amber-700/60 flex justify-between items-center cursor-pointer">
+        <div>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">⚠️ SUSPENSO PELOS ACHADOS ATUAIS</span>
+          <div class="text-xs font-bold text-amber-200 mt-1">${f.nome}</div>
+          <div class="text-[11px] text-amber-300/80">Bloqueado na presença de Ascite, Desidratação &ge; 8%, Doença Renal ou GI.</div>
+        </div>
+        <span class="text-xs font-bold text-amber-400 underline shrink-0 ml-2">📖 Fonte</span>
+      </div>`;
+    }
+
+    const totAtivo = kgCalc * doseAtiva;
+    const mlPuro = totAtivo / concAtiva;
+    const borda = grupoCfg.status === "alerta"
+      ? "border-amber-600/70 bg-amber-950/20"
+      : (isFoco ? "border-emerald-500/70 bg-emerald-950/20" : "border-slate-800 bg-slate-950/60");
+
+    return `<div onclick="abrirModalFarmaco(${fIdx})" class="p-3 rounded-xl border ${borda} hover:border-slate-600 transition cursor-pointer flex justify-between items-center gap-2">
+      <div class="space-y-0.5">
+        <div class="flex flex-wrap items-center gap-1.5">
+          ${isFoco ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950">★ DO CASO</span>' : ''}
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded ${grupoCfg.status === 'alerta' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-300'}">${grupoCfg.badge}</span>
+          <strong class="text-xs sm:text-sm text-white">${f.nome}</strong>
+        </div>
+        <div class="text-[11px] text-slate-400">
+          Dose: <strong class="text-slate-200">${isUI ? doseAtiva.toLocaleString("pt-BR") : doseAtiva} ${uDose}</strong> (${isUI ? Math.round(totAtivo).toLocaleString("pt-BR") : totAtivo.toFixed(2)} ${uTot}) &bull; Frasco: <strong>${isUI ? concAtiva.toLocaleString("pt-BR") : concAtiva} ${uConc}</strong>
+        </div>
+        <div class="text-[11px] text-slate-400">${grupoCfg.via}</div>
+      </div>
+      <div class="text-right shrink-0">
+        <div class="text-sm sm:text-base font-extrabold text-emerald-400 mono">${mlPuro >= 0.05 ? mlPuro.toFixed(2) + ' mL' : (mlPuro * 10).toFixed(2) + ' mL (1:10)'}</div>
+        <div class="text-[10px] text-slate-400 mono">${(mlPuro * 100).toFixed(0)} UI puro</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// --- MOTOR DAS ESCALAS CLÍNICAS ---
+
+function alternarAbaEscala(qual) {
+  ["mcgs", "fgs", "cmps"].forEach(k => {
+    document.getElementById(`painel-esc-${k}`)?.classList.toggle("hidden", k !== qual);
+    const btn = document.getElementById(`btn-esc-${k}`);
+    if (btn) {
+      btn.className = k === qual
+        ? "px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-blue-600 text-white"
+        : "px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-900 text-slate-300 border border-slate-700";
+    }
+  });
+  calcularMCGS();
+  calcularFGS();
+  calcularCMPS();
+}
+
+function atualizarAlertasEscalasTaxon() {
+  const alertaEl = document.getElementById("alerta-mcgs-especie");
+  if (!alertaEl) return;
+  const { t } = getTaxonAtual();
+  if (t.grupo.includes("Aves") || t.grupo.includes("Répteis")) {
+    alertaEl.classList.remove("hidden");
+    alertaEl.innerHTML = `⚠️ <strong>Alerta em ${t.nome}:</strong> A íris possui musculatura estriada voluntária — o reflexo pupilar à luz (RPL) pode ser falseado e não deve ser interpretado isoladamente como lesão de tronco.`;
+  } else if (t.id === "Gamba" || t.id === "Tamandua" || t.id === "Tatu") {
+    alertaEl.classList.remove("hidden");
+    alertaEl.innerHTML = `⚠️ <strong>Alerta em ${t.nome}:</strong> Diferenciar estupor neurológico de basotermia fisiológica ou tanatose (confirmar temperatura corporal antes de fechar o escore).`;
+  } else {
+    alertaEl.classList.add("hidden");
+    alertaEl.innerHTML = "";
+  }
+}
+
+function calcularMCGS() {
+  const out = document.getElementById("out-esc-mcgs");
+  if (!out) return null;
+  const m = parseInt(document.getElementById("mcgs-motora")?.value) || 6;
+  const t = parseInt(document.getElementById("mcgs-tronco")?.value) || 6;
+  const c = parseInt(document.getElementById("mcgs-consc")?.value) || 6;
+  const tot = m + t + c;
+
+  let classe = "text-emerald-400";
+  let interp = "Prognóstico Bom (TCE Leve — monitoração seriada q1–2h)";
+  if (tot <= 8) {
+    classe = "text-rose-400";
+    interp = "🚨 Prognóstico Grave (TCE Severo — risco de herniação; avaliar via aérea + Manitol 20% ou NaCl 7,5% e cabeça a 30°)";
+  } else if (tot <= 14) {
+    classe = "text-amber-300";
+    interp = "⚠️ Prognóstico Reservado (TCE Moderado — oxigenação, analgesia sem AINE/corticoide e reavaliação q30–60 min)";
+  }
+
+  out.innerHTML = `<div class="font-extrabold ${classe} mono">MCGS Total: ${tot}/18 (Motora ${m} | Tronco ${t} | Consciência ${c})</div>
+    <div class="text-[11px] text-slate-300 mt-0.5">${interp}</div>
+    <div class="text-[10px] text-slate-500 mt-1">Ref.: Platt et al. (JVIM, 2001) / Silverstein 3ª ed.</div>`;
+  return `MCGS: ${tot}/18 (Motora ${m}, Tronco ${t}, Consc. ${c}) — ${tot <= 8 ? "Prognóstico Grave" : (tot <= 14 ? "Prognóstico Reservado" : "Prognóstico Bom")}`;
+}
+
+function calcularFGS() {
+  const out = document.getElementById("out-esc-fgs");
+  if (!out) return null;
+  const ids = ["fgs-orelhas", "fgs-olhos", "fgs-focinho", "fgs-bigodes", "fgs-cabeca"];
+  const vals = ids.map(id => parseInt(document.getElementById(id)?.value) || 0);
+  const tot = vals.reduce((a, b) => a + b, 0);
+  const resgate = tot >= 4;
+
+  out.innerHTML = `<div class="font-extrabold ${resgate ? 'text-rose-400' : 'text-emerald-400'} mono">Feline Grimace Scale (FGS): ${tot}/10</div>
+    <div class="text-[11px] text-slate-300 mt-0.5">${resgate ? "🚨 Escore &ge; 4/10: Indicação de RESGATE ANALGÉSICO imediato (reavaliar em 30–60 min)." : "🟢 Escore &lt; 4/10: Sem indicação imediata de resgate (manter monitoração)."}</div>
+    <div class="text-[10px] text-slate-500 mt-1">Ref.: Evangelista et al. (Scientific Reports, 2019 — Univ. de Montréal).</div>`;
+  return `FGS (Dor Felina): ${tot}/10 — ${resgate ? "Indicação de resgate analgésico (>=4/10)" : "Sem indicação imediata de resgate (<4/10)"}`;
+}
+
+function calcularCMPS() {
+  const out = document.getElementById("out-esc-cmps");
+  if (!out) return null;
+  const v = parseInt(document.getElementById("cmps-voc")?.value) || 0;
+  const f = parseInt(document.getElementById("cmps-ferida")?.value) || 0;
+  const p = parseInt(document.getElementById("cmps-palp")?.value) || 0;
+  const po = parseInt(document.getElementById("cmps-post")?.value) || 0;
+  const co = parseInt(document.getElementById("cmps-comp")?.value) || 0;
+  const mob = parseInt(document.getElementById("cmps-mob")?.value);
+
+  const semMob = isNaN(mob) || mob < 0;
+  const tot = v + f + p + po + co + (semMob ? 0 : mob);
+  const max = semMob ? 20 : 24;
+  const corte = semMob ? 5 : 6;
+  const resgate = tot >= corte;
+
+  out.innerHTML = `<div class="font-extrabold ${resgate ? 'text-rose-400' : 'text-emerald-400'} mono">Glasgow Curta (CMPS-SF): ${tot}/${max}</div>
+    <div class="text-[11px] text-slate-300 mt-0.5">${resgate ? `🚨 Escore &ge; ${corte}/${max}: Indicação de RESGATE ANALGÉSICO (opioide/multimodal).` : `🟢 Escore &lt; ${corte}/${max}: Dor controlada no momento.`}</div>
+    <div class="text-[10px] text-slate-500 mt-1">Ref.: Reid et al. (Animal Welfare, 2007 — Univ. of Glasgow).</div>`;
+  return `CMPS-SF (Dor Canina): ${tot}/${max} — ${resgate ? `Indicação de resgate analgésico (>=${corte}/${max})` : "Dor controlada"}`;
+}
+
+function inserirEscalaNoExame(tipo) {
+  const txt = tipo === "mcgs" ? calcularMCGS() : (tipo === "fgs" ? calcularFGS() : calcularCMPS());
+  const campo = document.getElementById("p-exame-fisico");
+  if (!campo || !txt) return;
+  const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const linha = `[${hora}] ${txt}`;
+  campo.value = campo.value.trim() ? `${campo.value.trim()}\n${linha}` : linha;
+  campo.focus();
+}
+
+// Conectar automaticamente ao ciclo global de atualização do VetCore
+const _prevRecalcMelhorias = recalcularProntuario;
+recalcularProntuario = function() {
+  _prevRecalcMelhorias();
+  renderListaPrescricaoFiltrada();
+  atualizarAlertasEscalasTaxon();
+};
+
+setTimeout(() => {
+  renderListaPrescricaoFiltrada();
+  atualizarAlertasEscalasTaxon();
+  calcularMCGS();
+  calcularFGS();
+  calcularCMPS();
+}, 220);
