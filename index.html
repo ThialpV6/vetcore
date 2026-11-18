@@ -579,6 +579,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="database.js"></script>
 <script src="app.js"></script>
-<script>initVetCore();</script>
+<script>initVetCore();if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js');}</script>
 </body>
 </html>
