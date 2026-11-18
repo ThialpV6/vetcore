@@ -1,8 +1,13 @@
+
 name: Compilar VetCore APK Nativo
 
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -15,29 +20,40 @@ jobs:
       - name: ⚙️ Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
 
-      - name: 📱 Instalar Capacitor e Ferramentas Android
+      - name: ☕ Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: 🤖 Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 📱 Instalar Capacitor
         run: |
           npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install @capacitor/core@8.6.2 @capacitor/cli@8.6.2 @capacitor/android@8.6.2
 
-      - name: 🚀 Criar Configuração do Capacitor
+      - name: 🚀 Configurar Capacitor
         run: |
-          npx cap init VetCore com.vetcore.app --web-dir "." --ai-no-hooks
+          npx cap init VetCore com.vetcore.app --web-dir "."
 
-      - name: 🤖 Adicionar Plataforma Android
+      - name: 📲 Adicionar Android
         run: |
           npx cap add android
+          npx cap sync android
 
-      - name: 🔨 Compilar APK no Android Studio (Gradle)
+      - name: 🔨 Compilar APK
         working-directory: ./android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: 📤 Salvar APK gerado para Download
+      - name: 📤 Disponibilizar APK
         uses: actions/upload-artifact@v4
         with:
-          name: VetCore-APK-Nativo
+          name: VetCore-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
