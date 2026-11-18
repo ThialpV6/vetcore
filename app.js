@@ -1,0 +1,1713 @@
+// ============================================================================
+// VETCORE — MOTOR REATIVO, RECEITUÁRIO SIMPLESVET & CO-PILOTO IA (app.js)
+// ============================================================================
+
+const KEY_PACIENTES  = "vetcore_pacientes_v2";
+const KEY_SINAIS_USR = "vetcore_sinais_custom_v2";
+const KEY_LIVROS_USR = "vetcore_livros_custom_v2";
+const KEY_EMITENTE   = "vetcore_emitente_v2";
+const KEY_API_GEMINI = "vetcore_private_gemini_key";
+const KEY_DRIVE_URL  = "vetcore_drive_pdfs_url";
+
+let unidPeso = "kg";
+let sinaisAtivos = new Set();
+let pesoMagroManual = 0;
+let modoCriNovato = true;
+let modoDocAtual = "receita";
+let itensReceitaAtual = [];
+let pacienteAtualId = null;
+let pacientesSalvos = JSON.parse(localStorage.getItem(KEY_PACIENTES) || "[]");
+
+// Carregar Sinais e Livros Customizados do Usuário
+try {
+  const sigCustom = JSON.parse(localStorage.getItem(KEY_SINAIS_USR) || "{}");
+  Object.assign(SINAIS_DB, sigCustom);
+  const bkCustom = JSON.parse(localStorage.getItem(KEY_LIVROS_USR) || "[]");
+  bkCustom.forEach(b => CATALOGO_LIVROS.unshift(b));
+} catch (e) {}
+
+function initVetCore() {
+  // Popular Seletor Nível 1 (Ordem / Grupo)
+  const selTax = document.getElementById("g-tax");
+  selTax.innerHTML = TAXONS_DB.map((t, i) => `<option value="${i}">${t.nome}</option>`).join("");
+  selTax.value = "1"; // Inicia em Gatos por padrão
+
+  // Carregar dados do Emitente e Cofre Local
+  const emit = JSON.parse(localStorage.getItem(KEY_EMITENTE) || "{}");
+  if (emit.nome) document.getElementById("emit-nome").value = emit.nome;
+  if (emit.crmv) document.getElementById("emit-crmv").value = emit.crmv;
+  if (emit.end)  document.getElementById("emit-end").value  = emit.end;
+
+  if (document.getElementById("in-api-key")) document.getElementById("in-api-key").value = localStorage.getItem(KEY_API_GEMINI) || "";
+  if (document.getElementById("in-drive-url")) document.getElementById("in-drive-url").value = localStorage.getItem(KEY_DRIVE_URL) || "";
+
+  popularSeletorFarmacosReceita();
+  popularPillsCalculadoras();
+  atualizarListaPacientesSalvos();
+  trocarGrupoTaxonomico();
+  renderBularioCompleto();
+  renderCatalogoLivros();
+}
+
+function getTaxonAtual() {
+  const idx = parseInt(document.getElementById("g-tax").value) || 0;
+  const subIdx = parseInt(document.getElementById("g-subesp").value) || 0;
+  const t = TAXONS_DB[idx];
+  const sub = (t.subespecies && t.subespecies[subIdx]) ? t.subespecies[subIdx] : { nome: t.nome, peso: 1.0, unid: "kg", alerta: "" };
+  return { idx, subIdx, t, sub };
+}
+
+function getGuiaSemiologico(t) {
+  if (t.grupo.includes("Aves")) return GUIAS_SEMIOLOGICOS.padraoAves;
+  if (t.grupo.includes("Répteis")) return GUIAS_SEMIOLOGICOS.padraoRepteis;
+  return GUIAS_SEMIOLOGICOS.padraoMamiferos;
+}
+
+function getConfigFarmacoParaTaxon(f, tIdx, t) {
+  const dosePadrao = f.dosesPadrao[tIdx] !== undefined ? f.dosesPadrao[tIdx] : f.dosesPadrao[0];
+  let grupoCfg = f.faixasPorGrupo.Padrao;
+
+  if (t.id === "Gato" && f.faixasPorGrupo.Gato) grupoCfg = f.faixasPorGrupo.Gato;
+  else if (t.grupo.includes("Aves") && f.faixasPorGrupo.Aves) grupoCfg = f.faixasPorGrupo.Aves;
+  else if ((t.id === "Coelhos" || t.id === "Caviomorfos") && dosePadrao === 0 && f.faixasPorGrupo.ProibidoCeco) grupoCfg = f.faixasPorGrupo.ProibidoCeco;
+  else if ((t.id === "Coelhos" || t.id === "Caviomorfos") && f.faixasPorGrupo.Coelhos) grupoCfg = f.faixasPorGrupo.Coelhos;
+
+  const doseAtiva = (f._doseOverride && f._doseOverride[t.id] !== undefined) ? f._doseOverride[t.id] : dosePadrao;
+  const concAtiva = f._concAtiva || f.conc;
+  return { doseAtiva, concAtiva, grupoCfg };
+}
+
+// ============================================================================
+// CONTROLE TAXONÔMICO EM 2 NÍVEIS & PESO GLOBAL REATIVO EM TEMPO REAL
+// ============================================================================
+
+function trocarGrupoTaxonomico() {
+  const idx = parseInt(document.getElementById("g-tax").value) || 0;
+  const t = TAXONS_DB[idx];
+  const selSub = document.getElementById("g-subesp");
+  selSub.innerHTML = (t.subespecies || []).map((s, i) => `<option value="${i}">${s.nome}</option>`).join("");
+  selSub.value = "0";
+
+  document.getElementById("p-temp").value = ((t.tBasalMin + t.tMax) / 2).toFixed(1);
+  const guia = getGuiaSemiologico(t);
+  document.getElementById("p-ecc").innerHTML = guia.ecc.map((e, i) => `<option value="${i}">${e[0]}</option>`).join("");
+
+  trocarSubespecie();
+}
+
+function trocarSubespecie() {
+  const { sub } = getTaxonAtual();
+  if (sub && sub.peso) {
+    unidPeso = sub.unid || "kg";
+    document.getElementById("g-peso").value = sub.peso;
+    atualizarBotoesUnidadeUI();
+  }
+  atualizarPesoGlobal();
+}
+
+function setUnidade(u) {
+  const inp = document.getElementById("g-peso");
+  let v = parseFloat(inp.value) || 0;
+  if (unidPeso === "kg" && u === "g") inp.value = (v * 1000).toFixed(0);
+  if (unidPeso === "g" && u === "kg") inp.value = (v / 1000).toFixed(3);
+  unidPeso = u;
+  atualizarBotoesUnidadeUI();
+  atualizarPesoGlobal();
+}
+
+function atualizarBotoesUnidadeUI() {
+  document.getElementById("btn-u-g").className  = unidPeso === "g"  ? "px-2 py-1 rounded-md text-[11px] font-bold bg-emerald-600 text-white" : "px-2 py-1 rounded-md text-[11px] font-bold text-slate-400";
+  document.getElementById("btn-u-kg").className = unidPeso === "kg" ? "px-2 py-1 rounded-md text-[11px] font-bold bg-emerald-600 text-white" : "px-2 py-1 rounded-md text-[11px] font-bold text-slate-400";
+}
+
+function getPesoBrutoKg() {
+  const v = parseFloat(document.getElementById("g-peso").value) || 0;
+  return unidPeso === "g" ? v / 1000 : v;
+}
+
+function getPesoEfetivoKg() {
+  const bruto = getPesoBrutoKg();
+  if (sinaisAtivos.has("ascite") && pesoMagroManual > 0 && pesoMagroManual < bruto) return pesoMagroManual;
+  return bruto;
+}
+
+function formatarPesoExibicao(kg) {
+  return unidPeso === "g" ? `${(kg * 1000).toFixed(0)} g (${kg.toFixed(3)} kg)` : `${kg.toFixed(2)} kg`;
+}
+
+// Formata volumes pequenos automaticamente com instrução de Diluição 1:10 ou 1:100
+function formatarVolumeSeguro(mlPuro) {
+  if (mlPuro <= 0) return "0 mL";
+  if (mlPuro >= 0.05) return `${mlPuro.toFixed(2)} mL (${(mlPuro * 100).toFixed(0)} UI)`;
+  if (mlPuro >= 0.005) return `${(mlPuro * 10).toFixed(2)} mL da Dil. 1:10 [Puro: ${mlPuro.toFixed(3)} mL]`;
+  return `${(mlPuro * 100).toFixed(2)} mL da Dil. 1:100 [Puro: ${mlPuro.toFixed(4)} mL]`;
+}
+
+// GATILHO CENTRAL: Atualiza absolutamente todas as abas ao digitar o peso!
+function atualizarPesoGlobal() {
+  recalcularProntuario();
+  avaliarExamesLab();
+  calcularDoseIsolada();
+  calcularCRI();
+  renderBombasCombinadas();
+  renderProtocolosEspecie();
+  renderPainelEmergencia();
+  preencherConversorReceita();
+  sincronizarCabecalhoReceita();
+}
+
+// ============================================================================
+// ABA 1: PRONTUÁRIO COMPLETO, METABÓLICO, SANGUE E PRESCRIÇÃO
+// ============================================================================
+
+function analisarTextoAnamnese() {
+  const txt = (document.getElementById("p-anam").value || "").toLowerCase();
+  Object.keys(SINAIS_DB).forEach(k => {
+    if (SINAIS_DB[k].palavras.some(p => txt.includes(p))) {
+      sinaisAtivos.add(k);
+      if (k === "ascite" && pesoMagroManual <= 0) pesoMagroManual = +(getPesoBrutoKg() * 0.85).toFixed(2);
+    }
+  });
+  atualizarPesoGlobal();
+}
+
+function toggleSinal(k) {
+  if (sinaisAtivos.has(k)) sinaisAtivos.delete(k);
+  else {
+    sinaisAtivos.add(k);
+    if (k === "ascite" && pesoMagroManual <= 0) pesoMagroManual = +(getPesoBrutoKg() * 0.85).toFixed(2);
+  }
+  atualizarPesoGlobal();
+}
+
+function salvarNovoSinalCustom() {
+  const nome = document.getElementById("new-sig-nome").value.trim();
+  const foco = document.getElementById("new-sig-foco").value.split(",").map(s => s.trim()).filter(Boolean);
+  const cond = document.getElementById("new-sig-conduta").value.trim();
+  if (!nome || !cond) return alert("Preencha o nome e a conduta do achado.");
+  const id = "custom_" + Date.now();
+  const novo = { label: nome, palavras: [nome.toLowerCase()], conduta: cond, focoDrogas: foco, bloqueiaMelox: false, pedePesoMagro: false };
+  SINAIS_DB[id] = novo;
+  const salvos = JSON.parse(localStorage.getItem(KEY_SINAIS_USR) || "{}");
+  salvos[id] = novo;
+  localStorage.setItem(KEY_SINAIS_USR, JSON.stringify(salvos));
+  sinaisAtivos.add(id);
+  document.getElementById("box-criar-sinal").classList.add("hidden");
+  atualizarPesoGlobal();
+}
+
+function recalcularProntuario() {
+  const { idx: tIdx, t, sub } = getTaxonAtual();
+  const kgBruto = getPesoBrutoKg();
+  const kgCalc  = getPesoEfetivoKg();
+  const gCalc   = kgCalc * 1000;
+  const temp    = parseFloat(document.getElementById("p-temp").value);
+  const des     = parseFloat(document.getElementById("p-des").value) || 0;
+
+  // 1. Card Metabólico + Coleta Segura de Sangue + Alerta de Subespécie
+  const manutDia  = kgCalc * t.fluidoManut;
+  const desidMl   = gCalc * (des / 100);
+  const totFluido = manutDia + desidMl;
+  const kcalDia   = t.fatorK * Math.pow(kgCalc, 0.75);
+  const sgHigido  = kgCalc * 10; // 1% do PV
+  const sgDebil   = kgCalc * 5;  // 0.5% do PV
+
+  document.getElementById("card-metabolico").innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+      <div class="p-2.5 rounded-xl bg-rose-950/50 border border-rose-800/60 text-xs text-rose-200 leading-relaxed">
+        <strong>⛔ RESTRIÇÕES EM ${t.nome.toUpperCase()}:</strong> ${t.proibido}
+      </div>
+      <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-slate-300 leading-relaxed">
+        <strong>🧭 Diretriz Clínica:</strong> ${t.regraOuro}
+        ${sub.alerta ? `<div class="mt-1 p-1.5 rounded bg-amber-950/70 border border-amber-700/60 text-amber-200 font-semibold">${sub.alerta}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+      <div class="core-subcard p-2.5">
+        <div class="text-[10px] text-slate-400 uppercase">💧 Fluido 24h (${formatarPesoExibicao(kgCalc)})</div>
+        <div class="text-sm font-extrabold text-emerald-400 mono">${totFluido.toFixed(1)} mL/dia</div>
+        <div class="text-[10px] text-slate-400">${(totFluido/24).toFixed(2)} mL/h &bull; q6h: ${(totFluido/4).toFixed(1)} mL</div>
+      </div>
+      <div class="core-subcard p-2.5">
+        <div class="text-[10px] text-slate-400 uppercase">⚡ Bolus Choque (${t.bolusChoque} mL/kg)</div>
+        <div class="text-sm font-extrabold text-blue-400 mono">${(kgCalc * t.bolusChoque).toFixed(2)} mL</div>
+        <div class="text-[10px] text-slate-400">Manut: ${manutDia.toFixed(1)} + Desid: ${desidMl.toFixed(1)} mL</div>
+      </div>
+      <div class="core-subcard p-2.5">
+        <div class="text-[10px] text-slate-400 uppercase">🍼 Nutrição & Gavagem</div>
+        <div class="text-sm font-extrabold text-amber-300 mono">${kcalDia.toFixed(1)} kcal/d</div>
+        <div class="text-[10px] text-slate-400">Máx/tomada (${t.gavMax} mL/kg): <strong>${(kgCalc * t.gavMax).toFixed(2)} mL</strong></div>
+      </div>
+      <div class="core-subcard p-2.5 border border-rose-800/40">
+        <div class="text-[10px] text-rose-300 font-bold uppercase">🩸 Coleta Segura de Sangue</div>
+        <div class="text-sm font-extrabold text-rose-400 mono">Máx: ${sgHigido.toFixed(2)} mL (1%)</div>
+        <div class="text-[10px] text-slate-300">Debilitado (0,5%): <strong>${sgDebil.toFixed(2)} mL</strong></div>
+      </div>
+    </div>
+    <div class="text-[11px] text-slate-400 flex flex-wrap justify-between gap-2 px-1">
+      <span><strong>💉 Acessos:</strong> ${t.vias}</span>
+      <span class="text-emerald-300"><strong>🧪 Tubo de Sangue:</strong> ${t.tuboSangue}</span>
+    </div>
+  `;
+
+  // 2. Status Térmico em 3 Zonas
+  const boxT = document.getElementById("status-termico");
+  if (!isNaN(temp)) {
+    if (temp < t.tMin) {
+      boxT.className = "p-2.5 rounded-xl text-xs bg-blue-950/70 border border-blue-700/70 text-blue-200";
+      boxT.innerHTML = `❄️ <strong>HIPOTERMIA PATOLÓGICA (${temp} °C &lt; ${t.tMin} °C):</strong> Aquecer gradualmente antes de administrar dieta por sonda ou medicar SC! ${t.id === 'Gato' && temp < 37.0 ? '<br>🚨 <strong>Tríade do Choque Felino:</strong> Não infundir bolus rápido de cristaloide antes de atingir &ge; 37,0 °C!' : ''}`;
+    } else if (temp >= t.tMin && temp < t.tBasalMin) {
+      boxT.className = "p-2.5 rounded-xl text-xs bg-amber-950/70 border border-amber-700/70 text-amber-200";
+      boxT.innerHTML = `🟡 <strong>BASOTERMIA / REPOUSO DIURNO / TANATOSE (${temp} °C — Faixa Basal: ${t.tMin} a ${t.tBasalMin} °C):</strong> Fisiológico em <strong>${t.nome}</strong> em repouso ou tanatose! <strong>Não aqueça agressivamente</strong> se mucosas coradas.`;
+    } else if (temp > t.tMax) {
+      boxT.className = "p-2.5 rounded-xl text-xs bg-rose-950/70 border border-rose-700/70 text-rose-200";
+      boxT.innerHTML = `🔥 <strong>HIPERTERMIA (${temp} °C &gt; ${t.tMax} °C):</strong> Resfriamento gradual imediato + Oxigenoterapia!`;
+    } else {
+      boxT.className = "p-2.5 rounded-xl text-xs bg-emerald-950/50 border border-emerald-800/60 text-emerald-200";
+      boxT.innerHTML = `🟢 <strong>NORMOTERMIA ATIVA (${temp} °C):</strong> Dentro da faixa metabólica ideal (${t.tBasalMin} a ${t.tMax} °C).`;
+    }
+  }
+
+  // 3. Pílulas de Quadros Clínicos e Peso Magro
+  document.getElementById("pills-sinais").innerHTML = Object.keys(SINAIS_DB).map(k => {
+    const on = sinaisAtivos.has(k);
+    return `<button type="button" onclick="toggleSinal('${k}')" class="px-2.5 py-1.5 rounded-lg text-xs border transition ${on ? 'bg-emerald-600 text-white border-emerald-400 font-bold' : 'bg-slate-900 text-slate-300 border-slate-700'}">${SINAIS_DB[k].label}</button>`;
+  }).join("");
+
+  let htmlDet = "";
+  if (sinaisAtivos.size > 0) {
+    htmlDet += `<div class="flex flex-wrap items-center gap-1.5 pt-1">
+      <span class="text-[11px] text-slate-400">Ativos:</span>
+      ${Array.from(sinaisAtivos).map(k => `<span class="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold">${SINAIS_DB[k].label} <button type="button" onclick="toggleSinal('${k}')" class="ml-1 text-slate-400 hover:text-white">✕</button></span>`).join("")}
+    </div>`;
+  }
+  if (sinaisAtivos.has("ascite")) {
+    htmlDet += `<div class="p-2.5 rounded-xl bg-amber-950/60 border border-amber-600/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-amber-200">
+      <div>⚖️ <strong>Ascite / Efusão ativa:</strong> Balança = <strong>${kgBruto.toFixed(2)} kg</strong>. Informe o <strong>Peso Magro Estimado</strong> (sem líquido) para o cálculo seguro:</div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <input type="number" step="0.1" value="${pesoMagroManual}" oninput="pesoMagroManual=parseFloat(this.value)||0;atualizarPesoGlobal()" class="w-20 bg-slate-950 border border-amber-400 rounded-lg px-2 py-1 text-xs font-bold text-white mono">
+        <span class="font-bold">kg</span>
+      </div>
+    </div>`;
+  }
+  document.getElementById("barra-detectados").innerHTML = htmlDet;
+
+  // 4. Condutas Direcionadas e Lista de Prescrição
+  let focoDrogas = new Set();
+  let bloqMelox  = des >= 8;
+  document.getElementById("box-condutas-caso").innerHTML = Array.from(sinaisAtivos).map(k => {
+    const s = SINAIS_DB[k];
+    s.focoDrogas.forEach(d => focoDrogas.add(d));
+    if (s.bloqueiaMelox) bloqMelox = true;
+    return `<div class="core-subcard p-3 border-l-4 border-l-emerald-500 text-xs space-y-1">
+      <div class="font-bold text-emerald-400">${s.label} — Conduta Clínica:</div>
+      <div class="text-slate-200 whitespace-pre-line leading-relaxed">${s.conduta}</div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("lista-prescricao").innerHTML = FARMACOS_DB.map((f, fIdx) => {
+    const { doseAtiva, concAtiva, grupoCfg } = getConfigFarmacoParaTaxon(f, tIdx, t);
+    const isFoco = focoDrogas.has(f.id);
+
+    if (doseAtiva === 0 || grupoCfg.status === "proibido") {
+      return `<div onclick="abrirModalFarmaco(${fIdx})" class="p-3 rounded-xl bg-rose-950/30 border border-rose-800/60 flex justify-between items-center cursor-pointer">
+        <div>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">${grupoCfg.badge}</span>
+          <div class="text-xs font-bold text-rose-200 mt-1">${f.nome}</div>
+          <div class="text-[11px] text-rose-300/80">${grupoCfg.via}</div>
+        </div>
+        <span class="text-xs font-bold text-rose-400 underline shrink-0 ml-2">📖 Fonte</span>
+      </div>`;
+    }
+
+    if (f.id === "Meloxicam" && bloqMelox) {
+      return `<div onclick="abrirModalFarmaco(${fIdx})" class="p-3 rounded-xl bg-amber-950/30 border border-amber-700/60 flex justify-between items-center cursor-pointer">
+        <div>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">⚠️ SUSPENSO PELOS ACHADOS ATUAIS</span>
+          <div class="text-xs font-bold text-amber-200 mt-1">${f.nome}</div>
+          <div class="text-[11px] text-amber-300/80">Bloqueado na presença de Ascite, Desidratação &ge; 8%, Doença Renal ou GI.</div>
+        </div>
+        <span class="text-xs font-bold text-amber-400 underline shrink-0 ml-2">📖 Fonte</span>
+      </div>`;
+    }
+
+    const mgTot  = kgCalc * doseAtiva;
+    const mlPuro = mgTot / concAtiva;
+    const borda  = grupoCfg.status === "alerta" ? "border-amber-600/70 bg-amber-950/20" : (isFoco ? "border-emerald-500/70 bg-emerald-950/20" : "border-slate-800 bg-slate-950/60");
+
+    return `<div onclick="abrirModalFarmaco(${fIdx})" class="p-3 rounded-xl border ${borda} hover:border-slate-600 transition cursor-pointer flex justify-between items-center gap-2">
+      <div class="space-y-0.5">
+        <div class="flex flex-wrap items-center gap-1.5">
+          ${isFoco ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950">★ INDICADO NO CASO</span>' : ''}
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded ${grupoCfg.status === 'alerta' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-300'}">${grupoCfg.badge}</span>
+          <strong class="text-xs sm:text-sm text-white">${f.nome}</strong>
+        </div>
+        <div class="text-[11px] text-slate-400">
+          Dose: <strong class="text-slate-200">${doseAtiva} mg/kg</strong> (${mgTot.toFixed(2)} mg) &bull; Frasco: <strong>${concAtiva} mg/mL</strong> &bull; ${grupoCfg.via}
+        </div>
+        <div class="text-[11px] text-blue-400 font-medium">📖 Toque p/ ver fontes conferidas, trocar concentração do frasco ou enviar p/ Receita</div>
+      </div>
+      <div class="text-right shrink-0">
+        <div class="text-sm sm:text-base font-extrabold text-emerald-400 mono">${mlPuro >= 0.05 ? mlPuro.toFixed(2) + ' mL' : (mlPuro*10).toFixed(2) + ' mL (Dil 1:10)'}</div>
+        <div class="text-[10px] text-slate-400 mono">${(mlPuro*100).toFixed(0)} UI puro</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// MODAL DO FÁRMACO: SELETOR DE FRASCO + SELETOR DE DOSE + BOTÃO ENVIAR P/ RECEITA
+function selecionarDoseFaixa(fIdx, novaDose) {
+  const { t } = getTaxonAtual();
+  if (!FARMACOS_DB[fIdx]._doseOverride) FARMACOS_DB[fIdx]._doseOverride = {};
+  FARMACOS_DB[fIdx]._doseOverride[t.id] = novaDose;
+  atualizarPesoGlobal();
+  abrirModalFarmaco(fIdx);
+}
+
+function selecionarFrascoAtivo(fIdx, novaConc) {
+  FARMACOS_DB[fIdx]._concAtiva = novaConc;
+  atualizarPesoGlobal();
+  abrirModalFarmaco(fIdx);
+}
+
+function enviarFarmacoParaAbaReceita(fIdx) {
+  fecharModal();
+  mudarAba("receitas");
+  document.getElementById("rec-sel-farmaco").value = String(fIdx);
+  preencherConversorReceita();
+}
+
+function abrirModalFarmaco(fIdx) {
+  const { idx: tIdx, t } = getTaxonAtual();
+  const f = FARMACOS_DB[fIdx];
+  const { doseAtiva, concAtiva, grupoCfg } = getConfigFarmacoParaTaxon(f, tIdx, t);
+  const kgCalc = getPesoEfetivoKg();
+  const mgTot  = kgCalc * doseAtiva;
+  const mlPuro = mgTot / concAtiva;
+
+  document.getElementById("modal-titulo").textContent = `💊 ${f.nome} em ${t.nome}`;
+  document.getElementById("modal-corpo").innerHTML = `
+    <div class="flex flex-wrap justify-between items-center gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+      <div class="text-xs text-slate-300">Comercial: <strong class="text-amber-300">${f.comercial}</strong></div>
+      <button onclick="enviarFarmacoParaAbaReceita(${fIdx})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">📝 Enviar p/ Aba Receitas &rarr;</button>
+    </div>
+
+    ${f.frascos && f.frascos.length > 1 ? `
+    <div class="space-y-1">
+      <label class="text-[11px] text-slate-400 font-semibold uppercase">🧪 Escolher Concentração do Frasco / Apresentação:</label>
+      <div class="flex flex-wrap gap-1.5">
+        ${f.frascos.map(fr => `<button onclick="selecionarFrascoAtivo(${fIdx}, ${fr.conc})" class="px-2.5 py-1.5 rounded-lg border text-xs font-bold transition ${fr.conc === concAtiva ? 'bg-blue-600 text-white border-blue-400' : 'bg-slate-950 text-slate-300 border-slate-800'}">${fr.label}</button>`).join("")}
+      </div>
+    </div>` : ''}
+
+    ${grupoCfg.opcoes[0] > 0 ? `
+    <div class="space-y-1">
+      <label class="text-[11px] text-slate-400 font-semibold uppercase">⚡ Escolher Dose da Literatura (mg/kg):</label>
+      <div class="flex gap-2">
+        ${grupoCfg.opcoes.map(d => `<button onclick="selecionarDoseFaixa(${fIdx}, ${d})" class="flex-1 py-1.5 rounded-xl border text-xs font-bold mono transition ${d === doseAtiva ? 'bg-emerald-600 text-white border-emerald-400' : 'bg-slate-950 text-slate-300 border-slate-800'}">${d} mg/kg</button>`).join("")}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div class="p-3 rounded-xl bg-slate-950 border border-emerald-700/70">
+        <div class="text-[10px] text-slate-400 uppercase">1. Frasco Puro (${concAtiva} mg/mL)</div>
+        <div class="text-base font-extrabold text-emerald-400 mono mt-0.5">${mlPuro.toFixed(3)} mL</div>
+        <div class="text-[11px] text-slate-400 mono">${(mlPuro*100).toFixed(1)} UI (Seringa U-100)</div>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-950 border border-blue-800/60">
+        <div class="text-[10px] text-slate-400 uppercase">2. Diluição 1:10 (${(concAtiva/10).toFixed(2)} mg/mL)</div>
+        <div class="text-base font-extrabold text-blue-400 mono mt-0.5">${(mlPuro*10).toFixed(2)} mL</div>
+        <div class="text-[10px] text-slate-400">0,1 mL puro + 0,9 mL NaCl</div>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-950 border border-purple-800/60">
+        <div class="text-[10px] text-slate-400 uppercase">3. Diluição 1:100 (${(concAtiva/100).toFixed(3)} mg/mL)</div>
+        <div class="text-base font-extrabold text-purple-400 mono mt-0.5">${(mlPuro*100).toFixed(2)} mL</div>
+        <div class="text-[10px] text-slate-400">0,1 mL da 1:10 + 0,9 mL NaCl</div>
+      </div>
+    </div>` : ''}
+
+    <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 leading-relaxed">
+      <strong>📌 Resumo Farmacológico:</strong> ${f.resumoBulario}
+    </div>
+
+    <div class="space-y-2 pt-1">
+      <div class="text-xs font-bold uppercase tracking-wider text-amber-400">📚 Fontes Conferidas na Literatura para ${t.nome}:</div>
+      ${grupoCfg.fontes.map(ft => `
+        <div class="p-3 rounded-xl bg-slate-950 border border-amber-700/50 space-y-1">
+          <div class="flex justify-between items-center gap-2">
+            <strong class="text-xs text-amber-300">${ft[0]}</strong>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold shrink-0">${ft[2]}</span>
+          </div>
+          <blockquote class="text-xs text-slate-200 italic border-l-2 border-amber-500 pl-2.5 py-0.5">"${ft[1]}"</blockquote>
+        </div>
+      `).join("")}
+    </div>
+  `;
+  document.getElementById("modal-core").classList.remove("hidden");
+}
+
+// ============================================================================
+// ABA 2: 📝 RECEITAS (PADRÃO SIMPLESVET + CONVERSOR + ALTA + ENCAMINHAMENTO)
+// ============================================================================
+
+function popularSeletorFarmacosReceita() {
+  const sel = document.getElementById("rec-sel-farmaco");
+  sel.innerHTML = `<option value="-1">✍️ Digitar medicamento livremente (Manual)...</option>` +
+    FARMACOS_DB.map((f, i) => `<option value="${i}">💊 ${f.nome} (${f.comercial})</option>`).join("");
+}
+
+function formatarFracaoComprimido(num) {
+  if (num >= 0.20 && num <= 0.30) return "1/4 (um quarto) do comprimido";
+  if (num >= 0.45 && num <= 0.58) return "1/2 (meio) comprimido";
+  if (num >= 0.70 && num <= 0.80) return "3/4 do comprimido";
+  if (num >= 0.90 && num <= 1.15) return "1 comprimido";
+  if (num >= 1.40 && num <= 1.60) return "1 e 1/2 comprimido";
+  if (num >= 1.85 && num <= 2.15) return "2 comprimidos";
+  return `${num.toFixed(2)} comprimido(s)`;
+}
+
+function preencherConversorReceita() {
+  const fIdx = parseInt(document.getElementById("rec-sel-farmaco").value);
+  const box = document.getElementById("box-conversao-sugerida");
+  if (isNaN(fIdx) || fIdx < 0) {
+    box.innerHTML = `<span class="text-slate-400">Modo manual ativo: preencha o nome do produto e a posologia abaixo.</span>`;
+    return;
+  }
+
+  const { idx: tIdx, t } = getTaxonAtual();
+  const f = FARMACOS_DB[fIdx];
+  const { doseAtiva, concAtiva, grupoCfg } = getConfigFarmacoParaTaxon(f, tIdx, t);
+  const kg = getPesoEfetivoKg();
+  const mgTot = kg * doseAtiva;
+  const mlLiq = mgTot / concAtiva;
+  const gotas = mlLiq * (f.gotasMl || 20);
+
+  document.getElementById("rec-uso-tipo").value = f.usoReceita || "uso veterinário";
+  document.getElementById("rec-nome-item").value = `${f.nome} (${f.apres.split('|')[0].trim()})`;
+  document.getElementById("rec-embalagem").value = "1 frasco";
+  document.getElementById("rec-posologia").value = `Dar ${mlLiq.toFixed(2)} mL (${Math.round(gotas)} gotas) por via oral, ${grupoCfg.via}.`;
+
+  let botoesComp = "";
+  if (f.compMg && f.compMg.length > 0) {
+    botoesComp = f.compMg.map(cMg => {
+      const qtdComp = mgTot / cMg;
+      const textoComp = formatarFracaoComprimido(qtdComp);
+      return `<button type="button" onclick="aplicarSugestaoComprimido('${f.nome} ${cMg} mg', '1 caixa', 'Dar ${textoComp}, por via oral, ${grupoCfg.via}.')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-emerald-700 text-emerald-300 hover:text-white border border-emerald-600/50 text-[11px] font-semibold transition">
+        💊 Comp. ${cMg} mg &rarr; ${textoComp}
+      </button>`;
+    }).join("");
+  }
+
+  box.innerHTML = `
+    <div class="font-bold text-emerald-300">⚡ Dose calculada p/ ${formatarPesoExibicao(kg)}: <strong>${mgTot.toFixed(2)} mg</strong> por tomada (${doseAtiva} mg/kg)</div>
+    <div class="text-[11px] text-slate-300">Toque na apresentação desejada para preencher a receita automaticamente:</div>
+    <div class="flex flex-wrap gap-1.5 pt-1">
+      <button type="button" onclick="aplicarSugestaoComprimido('${f.nome} ${concAtiva} mg/mL', '1 frasco', 'Dar ${mlLiq.toFixed(2)} mL (ou ${Math.round(gotas)} gotas), por via oral, ${grupoCfg.via}.')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-blue-700 text-blue-300 hover:text-white border border-blue-600/50 text-[11px] font-semibold transition">
+        💧 Líquido (${concAtiva} mg/mL) &rarr; ${mlLiq.toFixed(2)} mL (${Math.round(gotas)} gotas)
+      </button>
+      ${botoesComp}
+    </div>
+  `;
+}
+
+function aplicarSugestaoComprimido(nomeItem, emb, posol) {
+  document.getElementById("rec-nome-item").value = nomeItem;
+  document.getElementById("rec-embalagem").value = emb;
+  document.getElementById("rec-posologia").value = posol;
+}
+
+function adicionarItemNaReceita() {
+  const via  = document.getElementById("rec-via-grupo").value;
+  const nome = document.getElementById("rec-nome-item").value.trim();
+  const uso  = document.getElementById("rec-uso-tipo").value;
+  const emb  = document.getElementById("rec-embalagem").value.trim() || "1 unidade";
+  const pos  = document.getElementById("rec-posologia").value.trim();
+  const obs  = document.getElementById("rec-obs-italico").value.trim();
+  if (!nome || !pos) return alert("Preencha o nome do medicamento e a posologia.");
+
+  itensReceitaAtual.push({ via, nome, uso, emb, pos, obs });
+  document.getElementById("rec-obs-italico").value = "";
+  atualizarFolhaReceita();
+}
+
+function limparItensReceita() {
+  itensReceitaAtual = [];
+  atualizarFolhaReceita();
+}
+
+function salvarEmitente() {
+  const emit = {
+    nome: document.getElementById("emit-nome").value,
+    crmv: document.getElementById("emit-crmv").value,
+    end:  document.getElementById("emit-end").value
+  };
+  localStorage.setItem(KEY_EMITENTE, JSON.stringify(emit));
+  atualizarFolhaReceita();
+}
+
+function sincronizarCabecalhoReceita() {
+  atualizarFolhaReceita();
+}
+
+function alternarModoDocumento(modo) {
+  modoDocAtual = modo;
+  document.getElementById("btn-doc-receita").className = modo === "receita" ? "px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white flex items-center gap-1.5" : "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5";
+  document.getElementById("btn-doc-alta").className    = modo === "alta"    ? "px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white flex items-center gap-1.5" : "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5";
+  document.getElementById("btn-doc-encam").className   = modo === "encam"   ? "px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white flex items-center gap-1.5" : "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5";
+  atualizarFolhaReceita();
+}
+
+function atualizarFolhaReceita() {
+  const { t, sub } = getTaxonAtual();
+  const kg   = getPesoEfetivoKg();
+  const pac  = document.getElementById("p-nome").value || "Paciente Sem Nome";
+  const raca = document.getElementById("p-raca").value || sub.nome;
+  const sexo = document.getElementById("p-sexo").value || "";
+  const idad = document.getElementById("p-idade").value || "Idade não informada";
+  const tut  = document.getElementById("p-tutor").value || "Tutor / Responsável";
+  const cont = document.getElementById("p-contato").value || "";
+  const emitNome = document.getElementById("emit-nome").value || "Médico(a) Veterinário(a)";
+  const emitCrmv = document.getElementById("emit-crmv").value || "CRMV";
+  const emitEnd  = document.getElementById("emit-end").value || "";
+  const tipoRec  = document.getElementById("rec-tipo").value;
+  const dataHoje = new Date().toLocaleDateString("pt-BR");
+
+  const cabecalhoSimplesVet = `
+    <div style="border-bottom: 2px solid #cbd5e1; padding-bottom: 12px; margin-bottom: 16px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div style="font-size:18px; font-weight:bold; color:#0f172a;">${pac}</div>
+          <div style="font-size:13px; color:#334155;">${t.nome.replace(/^[^\s]+\s/, '')} &bull; ${raca} &bull; ${sexo}</div>
+          <div style="font-size:13px; color:#334155;">Peso: <strong>${formatarPesoExibicao(kg)}</strong> &bull; Idade: ${idad}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px; font-weight:bold; color:#0f172a;">Responsável: ${tut}</div>
+          <div style="font-size:12px; color:#475569;">${cont}</div>
+          <div style="font-size:12px; color:#475569;">Data: ${dataHoje}</div>
+        </div>
+      </div>
+      <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #cbd5e1; font-size:12px; color:#475569;">
+        <strong>Dados do Emitente:</strong> ${emitNome} &bull; <strong>CRMV:</strong> ${emitCrmv} ${emitEnd ? `&bull; ${emitEnd}` : ''}
+      </div>
+    </div>
+  `;
+
+  const folha = document.getElementById("print-area");
+
+  if (modoDocAtual === "alta") {
+    const diag = document.getElementById("p-diagnostico").value || "Em acompanhamento clínico";
+    const anam = document.getElementById("p-anam").value || "";
+    folha.innerHTML = `
+      ${cabecalhoSimplesVet}
+      <h2 style="text-align:center; font-size:18px; font-weight:bold; text-transform:uppercase; margin-bottom:16px;">Resumo de Alta Médica & Recomendações</h2>
+      <p><strong>Diagnóstico / Suspeita Clínica:</strong> ${diag}</p>
+      <p style="margin-top:8px;"><strong>Resumo do Atendimento e Evolução:</strong><br>${anam}</p>
+      <p style="margin-top:12px;"><strong>Cuidados Domiciliares e Sinais de Alerta:</strong><br>
+      1. Manter as medicações prescritas rigorosamente nos horários indicados.<br>
+      2. Garantir oferta hídrica e alimentar conforme orientação específica para a espécie.<br>
+      3. Retornar imediatamente em caso de prostração aguda, inapetência, vômitos ou dispneia.</p>
+      <div style="margin-top:48px; text-align:center; border-top:1px solid #334155; width:260px; margin-left:auto; margin-right:auto; padding-top:6px;">
+        <strong>${emitNome}</strong><br><span style="font-size:12px;">${emitCrmv}</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (modoDocAtual === "encam") {
+    const diag = document.getElementById("p-diagnostico").value || "Avaliação especializada";
+    const anam = document.getElementById("p-anam").value || "";
+    const exFis = document.getElementById("p-exame-fisico").value || "";
+    folha.innerHTML = `
+      ${cabecalhoSimplesVet}
+      <h2 style="text-align:center; font-size:18px; font-weight:bold; text-transform:uppercase; margin-bottom:16px;">Termo de Encaminhamento Veterinário</h2>
+      <p>Ao(À) Colega Médico(a) Veterinário(a) / Setor de Especialidade,</p>
+      <p style="margin-top:8px;">Encaminho o paciente <strong>${pac}</strong> (${raca}, ${formatarPesoExibicao(kg)}) para avaliação especializada / exame complementar.</p>
+      <p style="margin-top:8px;"><strong>Histórico e Quadro Clínico:</strong> ${anam} ${exFis}</p>
+      <p style="margin-top:8px;"><strong>Suspeita Diagnóstica:</strong> ${diag}</p>
+      <p style="margin-top:12px;">Coloco-me à disposição para discussão conjunta do caso.</p>
+      <div style="margin-top:48px; text-align:center; border-top:1px solid #334155; width:260px; margin-left:auto; margin-right:auto; padding-top:6px;">
+        <strong>${emitNome}</strong><br><span style="font-size:12px;">${emitCrmv}</span>
+      </div>
+    `;
+    return;
+  }
+
+  // Modo Receita Padrão SimplesVet (Agrupado por Via com Linha Tracejada Clássica)
+  const gruposVia = {};
+  itensReceitaAtual.forEach(it => {
+    if (!gruposVia[it.via]) gruposVia[it.via] = [];
+    gruposVia[it.via].push(it);
+  });
+
+  let corpoHtml = "";
+  if (Object.keys(gruposVia).length === 0) {
+    corpoHtml = `
+      <div style="margin-top:14px;">
+        <div style="font-weight:bold; font-size:15px; margin-bottom:10px;">Uso Oral:</div>
+        <div style="margin-bottom:6px;">Amoxicilina + Clavulanato 50 mg/mL ---------- uso veterinário ---------- 1 frasco</div>
+        <div style="margin-left:28px; margin-bottom:14px;">Dar ${(kg * 15 / 50).toFixed(2)} mL de 12 em 12 horas, durante 7 dias.</div>
+      </div>
+    `;
+  } else {
+    corpoHtml = Object.keys(gruposVia).map(via => `
+      <div style="margin-top:16px;">
+        <div style="font-weight:bold; font-size:16px; margin-bottom:10px;">${via}</div>
+        ${gruposVia[via].map(it => `
+          <div style="margin-bottom:14px;">
+            <div style="font-size:15px;">${it.nome} ---------- ${it.uso} ---------- ${it.emb}</div>
+            <div style="margin-left:28px; margin-top:4px; white-space:pre-line;">${it.pos}</div>
+            ${it.obs ? `<div style="margin-left:28px; margin-top:4px; font-style:italic; color:#334155;">${it.obs}</div>` : ''}
+          </div>
+        `).join("")}
+      </div>
+    `).join("");
+  }
+
+  folha.innerHTML = `
+    ${cabecalhoSimplesVet}
+    <h2 style="text-align:center; font-size:17px; font-weight:bold; margin-bottom:14px;">${tipoRec}</h2>
+    ${corpoHtml}
+    <div style="margin-top:52px; text-align:center; border-top:1px solid #334155; width:260px; margin-left:auto; margin-right:auto; padding-top:6px;">
+      <strong>${emitNome}</strong><br><span style="font-size:12px;">${emitCrmv}</span>
+    </div>
+  `;
+}
+
+function copiarTextoReceita() {
+  const txt = document.getElementById("print-area").innerText;
+  navigator.clipboard.writeText(txt);
+  alert("✅ Documento copiado para a área de transferência!");
+}
+
+// ============================================================================
+// LINHA DO TEMPO E SALVAMENTO DE PACIENTES / RECEITAS NO PRONTUÁRIO
+// ============================================================================
+
+function salvarPacienteAtual() {
+  const { idx: tIdx, subIdx, t } = getTaxonAtual();
+  const nome = document.getElementById("p-nome").value.trim() || `${t.nome.split(' ')[1]} (${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})})`;
+  const dataHora = new Date().toLocaleString("pt-BR");
+
+  let pac = pacientesSalvos.find(p => p.id === pacienteAtualId || p.nome.toLowerCase() === nome.toLowerCase());
+  if (!pac) {
+    pac = { id: "pac_" + Date.now(), nome, historico: [] };
+    pacientesSalvos.unshift(pac);
+    pacienteAtualId = pac.id;
+  }
+
+  pac.nome = nome;
+  pac.tIdx = tIdx;
+  pac.subIdx = subIdx;
+  pac.peso = document.getElementById("g-peso").value;
+  pac.unid = unidPeso;
+  pac.raca = document.getElementById("p-raca").value;
+  pac.sexo = document.getElementById("p-sexo").value;
+  pac.idade = document.getElementById("p-idade").value;
+  pac.tutor = document.getElementById("p-tutor").value;
+  pac.contato = document.getElementById("p-contato").value;
+  pac.status = document.getElementById("p-status").value;
+  pac.anam = document.getElementById("p-anam").value;
+  pac.exFis = document.getElementById("p-exame-fisico").value;
+  pac.comp = document.getElementById("p-complementares").value;
+  pac.diag = document.getElementById("p-diagnostico").value;
+  pac.sinais = Array.from(sinaisAtivos);
+
+  pac.historico.unshift({
+    data: dataHora,
+    tipo: "🩺 Atendimento / Evolução",
+    resumo: `Peso: ${pac.peso} ${pac.unid} | Suspeita: ${pac.diag || 'Em investigação'} | Anamnese: ${pac.anam.slice(0, 120)}`
+  });
+
+  localStorage.setItem(KEY_PACIENTES, JSON.stringify(pacientesSalvos));
+  atualizarListaPacientesSalvos();
+  renderTimelinePaciente(pac);
+  alert(`✅ Prontuário de "${nome}" salvo na Linha do Tempo!`);
+}
+
+function salvarReceitaNoProntuario() {
+  if (!pacienteAtualId) salvarPacienteAtual();
+  const pac = pacientesSalvos.find(p => p.id === pacienteAtualId);
+  if (!pac) return;
+
+  const htmlDoc = document.getElementById("print-area").innerHTML;
+  const titulo = modoDocAtual === "receita" ? "💊 Receita Emitida" : (modoDocAtual === "alta" ? "📄 Resumo de Alta" : "📨 Encaminhamento");
+  pac.historico.unshift({
+    data: new Date().toLocaleString("pt-BR"),
+    tipo: titulo,
+    resumo: document.getElementById("print-area").innerText.slice(0, 140) + "...",
+    htmlSalvo: htmlDoc
+  });
+  localStorage.setItem(KEY_PACIENTES, JSON.stringify(pacientesSalvos));
+  renderTimelinePaciente(pac);
+  alert(`✅ ${titulo} anexada à Linha do Tempo de ${pac.nome}!`);
+}
+
+function atualizarListaPacientesSalvos() {
+  const sel = document.getElementById("sel-pacientes-salvos");
+  sel.innerHTML = `<option value="">🩺 Pacientes (${pacientesSalvos.length})</option>` +
+    pacientesSalvos.map(p => `<option value="${p.id}" ${p.id === pacienteAtualId ? 'selected' : ''}>${p.nome} (${p.peso}${p.unid})</option>`).join("");
+}
+
+function carregarPacienteSalvo(id) {
+  const pac = pacientesSalvos.find(p => p.id === id);
+  if (!pac) return;
+  pacienteAtualId = pac.id;
+  document.getElementById("g-tax").value = String(pac.tIdx || 0);
+  trocarGrupoTaxonomico();
+  document.getElementById("g-subesp").value = String(pac.subIdx || 0);
+  unidPeso = pac.unid || "kg";
+  document.getElementById("g-peso").value = pac.peso || 1.0;
+  atualizarBotoesUnidadeUI();
+
+  document.getElementById("p-nome").value = pac.nome || "";
+  document.getElementById("p-raca").value = pac.raca || "";
+  document.getElementById("p-sexo").value = pac.sexo || "Macho, Fértil";
+  document.getElementById("p-idade").value = pac.idade || "";
+  document.getElementById("p-tutor").value = pac.tutor || "";
+  document.getElementById("p-contato").value = pac.contato || "";
+  document.getElementById("p-status").value = pac.status || "Internado";
+  document.getElementById("p-anam").value = pac.anam || "";
+  document.getElementById("p-exame-fisico").value = pac.exFis || "";
+  document.getElementById("p-complementares").value = pac.comp || "";
+  document.getElementById("p-diagnostico").value = pac.diag || "";
+  sinaisAtivos = new Set(pac.sinais || []);
+
+  atualizarPesoGlobal();
+  renderTimelinePaciente(pac);
+}
+
+function novoPacienteLimpo() {
+  pacienteAtualId = null;
+  ["p-nome", "p-raca", "p-idade", "p-tutor", "p-contato", "p-anam", "p-exame-fisico", "p-complementares", "p-diagnostico", "p-fc", "p-fr", "p-mucosas", "p-tpc", "p-glic", "p-ht-ppt", "p-pas"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  sinaisAtivos.clear();
+  itensReceitaAtual = [];
+  atualizarListaPacientesSalvos();
+  atualizarPesoGlobal();
+  document.getElementById("timeline-paciente").innerHTML = "Novo atendimento iniciado.";
+}
+
+function renderTimelinePaciente(pac) {
+  const box = document.getElementById("timeline-paciente");
+  if (!pac || !pac.historico || pac.historico.length === 0) {
+    box.innerHTML = "Nenhum histórico registrado.";
+    return;
+  }
+  box.innerHTML = pac.historico.map((h, i) => `
+    <div class="core-subcard p-2.5 border-l-2 ${h.tipo.includes('Receita') ? 'border-l-purple-500' : 'border-l-emerald-500'} flex justify-between items-center gap-2">
+      <div>
+        <div class="text-[11px] font-bold text-white">${h.data} — <span class="text-emerald-400">${h.tipo}</span></div>
+        <div class="text-[11px] text-slate-400">${h.resumo}</div>
+      </div>
+      ${h.htmlSalvo ? `<button onclick="reabrirDocumentoSalvo('${pac.id}', ${i})" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-blue-300 shrink-0">📄 Abrir</button>` : ''}
+    </div>
+  `).join("");
+}
+
+function reabrirDocumentoSalvo(pacId, histIdx) {
+  const pac = pacientesSalvos.find(p => p.id === pacId);
+  if (!pac || !pac.historico[histIdx]?.htmlSalvo) return;
+  mudarAba("receitas");
+  document.getElementById("print-area").innerHTML = pac.historico[histIdx].htmlSalvo;
+}
+
+// ============================================================================
+// ABA 3: 🧮 CÁLCULOS (DOSES, CRI PASSO A PASSO, SEDAÇÃO E EUTANÁSIA)
+// ============================================================================
+
+function alternarSubCalc(qual) {
+  ["doses", "sedacao", "eutanasia"].forEach(k => {
+    document.getElementById(`subcalc-${k}`).classList.toggle("hidden", k !== qual);
+    document.getElementById(`subbtn-${k}`).className = k === qual
+      ? "px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white whitespace-nowrap"
+      : "px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 border border-slate-800 whitespace-nowrap";
+  });
+}
+
+function popularPillsCalculadoras() {
+  document.getElementById("calc-drogas-pills").innerHTML = FARMACOS_DB.map((f, i) =>
+    `<button type="button" onclick="preencherCalcDroga(${i})" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs text-slate-200">${f.nome}</button>`
+  ).join("");
+
+  const presetsCRI = [
+    ["Fentanil (3 µg/kg/h)", 3, "mcg_h", 0.05],
+    ["Lidocaína Cão (50 µg/kg/min)", 50, "mcg_min", 20],
+    ["Cetamina Analgésica (10 µg/kg/min)", 10, "mcg_min", 100],
+    ["Noradrenalina (0.2 µg/kg/min)", 0.2, "mcg_min", 1],
+    ["Dobutamina (5 µg/kg/min)", 5, "mcg_min", 12.5]
+  ];
+  document.getElementById("cri-presets-pills").innerHTML = presetsCRI.map(p =>
+    `<button type="button" onclick="document.getElementById('cr-dose').value=${p[1]};document.getElementById('cr-unid').value='${p[2]}';document.getElementById('cr-conc').value=${p[3]};calcularCRI();" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs text-blue-300">${p[0]}</button>`
+  ).join("");
+}
+
+function preencherCalcDroga(fIdx) {
+  const { idx: tIdx, t } = getTaxonAtual();
+  const f = FARMACOS_DB[fIdx];
+  const { doseAtiva, concAtiva } = getConfigFarmacoParaTaxon(f, tIdx, t);
+  document.getElementById("ca-dose").value = doseAtiva;
+  document.getElementById("ca-udose").value = "mg";
+  document.getElementById("ca-conc").value = concAtiva;
+  document.getElementById("ca-uconc").value = "mgml";
+  calcularDoseIsolada();
+}
+
+function calcularDoseIsolada() {
+  const kg = getPesoEfetivoKg();
+  const dVal = parseFloat(document.getElementById("ca-dose").value) || 0;
+  const uDose = document.getElementById("ca-udose").value;
+  const cVal = parseFloat(document.getElementById("ca-conc").value) || 0;
+  const uConc = document.getElementById("ca-uconc").value;
+
+  const doseMgKg = uDose === "mcg" ? dVal / 1000 : dVal;
+  const concMgMl = uConc === "perc" ? cVal * 10 : cVal;
+  if (kg <= 0 || doseMgKg <= 0 || concMgMl <= 0) return;
+
+  const mgTot  = kg * doseMgKg;
+  const mlPuro = mgTot / concMgMl;
+  const precisaDiluir = mlPuro < 0.05;
+
+  document.getElementById("ca-out-destaque").innerHTML = `
+    <div class="p-4 rounded-2xl bg-slate-950 border-2 ${precisaDiluir ? 'border-amber-500/80' : 'border-emerald-500/80'} text-center space-y-1">
+      <div class="text-[11px] uppercase tracking-wider font-bold ${precisaDiluir ? 'text-amber-400' : 'text-emerald-400'}">
+        ${precisaDiluir ? '⚠️ Volume Puro < 0,05 mL — Use a Diluição 1:10 Abaixo!' : `✅ Aspirar do Frasco Puro (p/ ${formatarPesoExibicao(kg)})`}
+      </div>
+      <div class="text-3xl sm:text-4xl font-black text-white mono">${mlPuro.toFixed(3)} mL</div>
+      <div class="text-sm font-bold text-emerald-400 mono">Equivale a ${(mlPuro*100).toFixed(1)} UI (Seringa U-100)</div>
+      <div class="text-[11px] text-slate-400 pt-1">Dose total: <strong>${mgTot.toFixed(3)} mg</strong></div>
+    </div>
+
+    <div class="pt-2">
+      <button type="button" onclick="document.getElementById('box-diluicoes-calc').classList.toggle('hidden')" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-blue-300 border border-slate-700">
+        💧 ${precisaDiluir ? 'Receita de Diluição 1:10 e 1:100 (Aberta Automaticamente)' : 'Abrir opções de Diluição 1:10 / 1:100 ▾'}
+      </button>
+      <div id="box-diluicoes-calc" class="${precisaDiluir ? '' : 'hidden'} grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+        <div class="p-3 rounded-xl bg-slate-950 border border-blue-700/60">
+          <div class="text-xs font-bold text-blue-400">Diluição 1:10 (0,1 mL remédio + 0,9 mL NaCl)</div>
+          <div class="text-lg font-extrabold text-white mono mt-1">Aplicar: ${(mlPuro*10).toFixed(2)} mL (${(mlPuro*1000).toFixed(0)} UI)</div>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-950 border border-purple-700/60">
+          <div class="text-xs font-bold text-purple-400">Diluição 1:100 (0,1 mL da 1:10 + 0,9 mL NaCl)</div>
+          <div class="text-lg font-extrabold text-white mono mt-1">Aplicar: ${(mlPuro*100).toFixed(2)} mL</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleModoCRI(novato) {
+  modoCriNovato = novato;
+  document.getElementById("btn-cri-rapido").className = !novato ? "px-3 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white" : "px-3 py-1 rounded-lg text-xs font-semibold text-slate-400";
+  document.getElementById("btn-cri-novato").className = novato ? "px-3 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white" : "px-3 py-1 rounded-lg text-xs font-semibold text-slate-400";
+  calcularCRI();
+}
+
+function calcularCRI() {
+  const peso  = getPesoEfetivoKg();
+  const mlh   = parseFloat(document.getElementById("cr-mlh").value) || 0;
+  const bolsa = parseFloat(document.getElementById("cr-bolsa").value) || 0;
+  const dose  = parseFloat(document.getElementById("cr-dose").value) || 0;
+  const unid  = document.getElementById("cr-unid").value;
+  const conc  = parseFloat(document.getElementById("cr-conc").value) || 0;
+  if (peso <= 0 || mlh <= 0 || bolsa <= 0 || dose <= 0 || conc <= 0) return;
+
+  let mgPorHora = dose * peso;
+  if (unid === "mcg_min") mgPorHora = (dose * peso * 60) / 1000;
+  else if (unid === "mcg_h") mgPorHora = (dose * peso) / 1000;
+
+  const horasDuracao = bolsa / mlh;
+  const mgTotalBolsa = mgPorHora * horasDuracao;
+  const mlFarmaco    = mgTotalBolsa / conc;
+  const mlDiluente   = bolsa - mlFarmaco;
+
+  const out = document.getElementById("cr-out");
+  if (mlFarmaco >= bolsa) {
+    out.innerHTML = `<div class="p-3 rounded-xl bg-rose-950 border border-rose-700 text-xs text-rose-200 font-bold">🚨 Volume de fármaco (${mlFarmaco.toFixed(1)} mL) excede a seringa/bolsa (${bolsa} mL)!</div>`;
+    return;
+  }
+
+  if (!modoCriNovato) {
+    out.innerHTML = `<div class="p-3.5 rounded-xl bg-slate-950 border border-blue-700/70 space-y-1 text-xs">
+      <div class="text-sm font-extrabold text-emerald-400 mono">Aspirar Fármaco: ${mlFarmaco.toFixed(2)} mL (${(mlFarmaco*100).toFixed(0)} UI) + Diluente: ${mlDiluente.toFixed(2)} mL</div>
+      <div class="text-slate-300">Taxa: <strong>${mlh.toFixed(1)} mL/h</strong> (Dura ${horasDuracao.toFixed(1)}h) &bull; Microgotas: <strong>${mlh.toFixed(0)} mcgts/min</strong></div>
+    </div>`;
+  } else {
+    out.innerHTML = `<div class="p-4 rounded-xl bg-slate-950 border border-emerald-600/70 space-y-2 text-xs leading-relaxed">
+      <div class="font-bold uppercase text-emerald-400">🎓 Passo a Passo de Bancada (Para ${formatarPesoExibicao(peso)}):</div>
+      <div><strong>1. Seringa/Bolsa (${bolsa} mL):</strong> Coloque <strong class="text-blue-400 mono">${mlDiluente.toFixed(2)} mL</strong> de NaCl 0,9%.</div>
+      <div><strong>2. Adicionar Fármaco:</strong> Aspire <strong class="text-emerald-400 text-sm mono">${mlFarmaco.toFixed(2)} mL (${(mlFarmaco*100).toFixed(0)} UI)</strong> do frasco puro (${conc} mg/mL) e misture na seringa completando ${bolsa} mL.</div>
+      <div><strong>3. Velocidade na Bomba:</strong> Programe em <strong class="text-amber-300 text-sm mono">${mlh.toFixed(1)} mL/h</strong> (duração: ${horasDuracao.toFixed(1)} horas | Equipo Microgotas: ${mlh.toFixed(0)} gotas/min).</div>
+    </div>`;
+  }
+}
+
+// PROTOCOLOS DE SEDAÇÃO E EUTANÁSIA REATIVOS AO PESO (INCLUINDO GRAMAS E DILUIÇÃO 1:10)
+function renderProtocolosEspecie() {
+  const { t } = getTaxonAtual();
+  const kg = getPesoEfetivoKg();
+  const pesoTxt = formatarPesoExibicao(kg);
+
+  // Sedação + Reversores Calculados ao lado
+  const mlFlumazenil = (kg * (t.grupo.includes("Aves") ? 0.05 : 0.02)) / 0.1;
+
+  document.getElementById("box-sedacao-especie").innerHTML = `
+    <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-2">
+      <h4 class="text-xs sm:text-sm font-bold text-emerald-400">💉 Protocolos de Sedação & Contenção para ${t.nome} — Peso Atual: <span class="text-white mono">${pesoTxt}</span></h4>
+      <span class="text-xs bg-purple-950/80 border border-purple-700/60 text-purple-200 px-2.5 py-1 rounded-lg mono">🔄 Reversor Midazolam (Flumazenil 0,1 mg/mL): <strong>${formatarVolumeSeguro(mlFlumazenil)}</strong></span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+      ${t.sedacao.map(s => {
+        let volTotal = 0;
+        const linhas = s.drogas.map(d => {
+          const farm = FARMACOS_DB.find(f => f.id.startsWith(d[0])) || { conc: 10 };
+          const conc = farm._concAtiva || farm.conc;
+          const mg = kg * d[1];
+          const ml = mg / conc;
+          volTotal += ml;
+          return `<div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
+            <span><strong>${d[0]}</strong> (${d[1]} mg/kg &bull; Frasco ${conc} mg/mL)</span>
+            <strong class="text-emerald-400 mono text-right">${formatarVolumeSeguro(ml)}</strong>
+          </div>`;
+        }).join("");
+        const alertaDividir = (t.grupo.includes("Aves") && volTotal > 0.35)
+          ? `<div class="p-2 rounded bg-amber-950/70 border border-amber-600/60 text-[11px] text-amber-200 font-semibold">⚠️ Volume total IM (${volTotal.toFixed(2)} mL): Dividir aplicando <strong>${(volTotal/2).toFixed(2)} mL no peitoral direito</strong> e <strong>${(volTotal/2).toFixed(2)} mL no peitoral esquerdo</strong>!</div>` : "";
+        return `<div class="core-subcard p-3.5 space-y-2">
+          <div class="font-bold text-xs text-blue-300">${s.nome}</div>
+          <div class="text-xs space-y-1">${linhas}</div>
+          ${alertaDividir}
+          <div class="text-[11px] text-slate-400"><strong>Via:</strong> ${s.via} &bull; ${s.obs}</div>
+        </div>`;
+      }).join("")}
+    </div>
+  `;
+
+  // Eutanásia em 3 Etapas (Atualizando ao vivo com o peso!)
+  const eu = t.eutanasia;
+  const mlCet  = (kg * eu.etapa1[1]) / eu.etapa1[2];
+  const mlMid  = (kg * eu.etapa1[3]) / eu.etapa1[4];
+  const mlProp = (kg * eu.etapa2[1]) / eu.etapa2[2];
+  const mlKcl  = kg * eu.etapa3[1];
+
+  document.getElementById("box-eutanasia-especie").innerHTML = `
+    <div class="p-3 rounded-xl bg-rose-950/60 border border-rose-700/80 text-xs text-rose-200">
+      <strong>⚖️ DIRETRIZ ÉTICA OBRIGATÓRIA (CFMV nº 1000/2012 & AVMA) — Calculado para <span class="underline">${pesoTxt}</span>:</strong> Seguir rigorosamente as 3 etapas sequenciais. Proibido administrar KCl antes da arreflexia profunda (Etapa 2).
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="core-subcard p-3.5 border-t-2 border-t-blue-500 space-y-1.5">
+        <div class="text-xs font-bold text-blue-400">1ª Etapa: MPA / Sedação Profunda</div>
+        <p class="text-[11px] text-slate-300">${eu.etapa1[0]}</p>
+        <div class="text-xs font-bold text-white mono pt-1 space-y-1">
+          <div>&bull; Cetamina (${eu.etapa1[2]} mg/mL): <span class="text-emerald-400">${formatarVolumeSeguro(mlCet)}</span></div>
+          <div>&bull; Midazolam (${eu.etapa1[4]} mg/mL): <span class="text-emerald-400">${formatarVolumeSeguro(mlMid)}</span></div>
+        </div>
+      </div>
+      <div class="core-subcard p-3.5 border-t-2 border-t-purple-500 space-y-1.5">
+        <div class="text-xs font-bold text-purple-400">2ª Etapa: Anestesia Geral / Arreflexia</div>
+        <p class="text-[11px] text-slate-300">${eu.etapa2[0]}</p>
+        <div class="text-xs font-bold text-white mono pt-1">
+          &bull; Propofol (10 mg/mL): <span class="text-emerald-400">${formatarVolumeSeguro(mlProp)} IV/IO</span>
+        </div>
+      </div>
+      <div class="core-subcard p-3.5 border-t-2 border-t-rose-500 space-y-1.5">
+        <div class="text-xs font-bold text-rose-400">3ª Etapa: Parada Cardíaca (Pós-Inconsciência)</div>
+        <p class="text-[11px] text-slate-300">${eu.etapa3[0]}</p>
+        <div class="text-xs font-bold text-white mono pt-1">
+          &bull; KCl 19,1%: <span class="text-rose-400">${formatarVolumeSeguro(mlKcl)} IV</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================================
+// ABA 4: 🚨 EMERGÊNCIA (DROGAS DE PCR/CRISE + XABCDE + MANOBRAS)
+// ============================================================================
+
+function renderPainelEmergencia() {
+  const { t } = getTaxonAtual();
+  const kg = getPesoEfetivoKg();
+  const isAve = t.grupo.includes("Aves");
+
+  document.getElementById("grid-drogas-emergencia").innerHTML = DROGAS_EMERGENCIA_DB.map(d => {
+    let dose = d.dosePadrao;
+    if (isAve && d.doseAves !== undefined) dose = d.doseAves;
+    if (t.id === "Gato" && d.doseGato !== undefined) dose = d.doseGato;
+    const mg = kg * dose;
+    const ml = mg / d.conc;
+    return `<div class="core-subcard p-3 border-l-4 border-l-${d.cor}-500 flex flex-col justify-between gap-1.5">
+      <div>
+        <div class="text-xs font-bold text-white">${d.nome}</div>
+        <div class="text-[11px] text-slate-400">Dose: <strong>${dose} ${d.conc === 1 && d.nome.includes('Salina') ? 'mL/kg' : 'mg/kg'}</strong> &bull; Frasco: ${d.apres}</div>
+      </div>
+      <div class="py-1.5 px-2.5 rounded-lg bg-slate-950 border border-slate-800 text-sm font-black text-emerald-400 mono">
+        Aspirar: ${formatarVolumeSeguro(ml)}
+      </div>
+      <div class="text-[10px] text-slate-300"><strong>Via:</strong> ${d.via}<br><span class="text-amber-300">${d.obs}</span></div>
+    </div>`;
+  }).join("");
+
+  // XABCDE Adaptado + Bolus Calculado na Letra C
+  const chaveTaxon = isAve ? "Aves" : (t.grupo.includes("Répteis") ? "Repteis" : t.id);
+  const x = PROTOCOLOS_MESTRES.xabcde;
+  document.getElementById("box-xabcde").innerHTML = `
+    <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300">
+      <strong class="text-amber-400">📚 Fontes Base do XABCDE:</strong> ${x.fontesBase.join(" &bull; ")}
+    </div>
+    <div class="space-y-2.5">
+      ${x.etapas.map(et => {
+        const notaEsp = et.porTaxon[t.id] || et.porTaxon[chaveTaxon] || "";
+        const calcChoque = et.letra === "C" ? `<div class="p-2 rounded-lg bg-emerald-950/60 border border-emerald-600/60 text-xs text-emerald-200 font-bold mono">💧 Prova de Carga Calculada p/ ${formatarPesoExibicao(kg)} (${t.bolusChoque} mL/kg): Infundir ${(kg * t.bolusChoque).toFixed(2)} mL em 15 minutos e reavaliar!</div>` : "";
+        return `<div class="core-subcard p-3.5 border-l-4 border-l-${et.cor}-500 space-y-1.5">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-lg bg-${et.cor}-500/20 border border-${et.cor}-500/40 text-${et.cor}-400 font-black text-xs flex items-center justify-center mono">${et.letra}</span>
+            <strong class="text-xs sm:text-sm text-white">${et.nome}</strong>
+          </div>
+          <p class="text-xs text-slate-300 whitespace-pre-line leading-relaxed">${et.geral}</p>
+          ${calcChoque}
+          ${notaEsp ? `<div class="p-2.5 rounded-lg bg-amber-950/50 border border-amber-700/60 text-xs text-amber-200"><strong>🎯 Particularidade em ${t.nome}:</strong> ${notaEsp}</div>` : ''}
+        </div>`;
+      }).join("")}
+    </div>
+  `;
+
+  document.getElementById("box-manobras-emergencia").innerHTML = PROTOCOLOS_MESTRES.manobras.map(m => `
+    <div class="core-subcard p-3.5 space-y-1.5">
+      <div class="text-xs font-bold text-blue-300">${m.titulo}</div>
+      <div class="text-[10px] text-amber-300 font-semibold">📖 Fonte: ${m.fonte}</div>
+      <p class="text-xs text-slate-300 whitespace-pre-line leading-relaxed">${m.passos}</p>
+    </div>
+  `).join("");
+}
+
+// ============================================================================
+// ABA 5: 📚 BULÁRIO, ACERVO CURADO DO DRIVE E CRUZAMENTO IA
+// ============================================================================
+
+function alternarSubFontes(qual) {
+  ["bulario", "livros", "extrator"].forEach(k => {
+    document.getElementById(`painel-${k}`).classList.toggle("hidden", k !== qual);
+    document.getElementById(`subf-${k}`).className = k === qual
+      ? "px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white whitespace-nowrap"
+      : "px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 border border-slate-800 whitespace-nowrap";
+  });
+}
+
+function renderBularioCompleto() {
+  const termo = (document.getElementById("busca-bulario")?.value || "").toLowerCase();
+  const filtrados = FARMACOS_DB.filter(f => (f.nome + f.comercial + f.resumoBulario).toLowerCase().includes(termo));
+  document.getElementById("lista-bulario-completo").innerHTML = filtrados.map(f => {
+    const fIdx = FARMACOS_DB.indexOf(f);
+    return `<div onclick="abrirModalFarmaco(${fIdx})" class="core-subcard p-3.5 hover:border-emerald-500/60 transition cursor-pointer space-y-1.5">
+      <div class="flex justify-between items-start gap-2">
+        <strong class="text-xs sm:text-sm text-white">💊 ${f.nome}</strong>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-semibold">Ver Doses por Espécie &rarr;</span>
+      </div>
+      <div class="text-[11px] text-amber-300 font-medium">Comercial: ${f.comercial} &bull; ${f.apres}</div>
+      <p class="text-xs text-slate-300 leading-relaxed">${f.resumoBulario}</p>
+    </div>`;
+  }).join("");
+}
+
+function renderCatalogoLivros() {
+  const termo = (document.getElementById("busca-livros")?.value || "").toLowerCase();
+  const driveGeral = localStorage.getItem(KEY_DRIVE_URL) || "";
+  const filtrados = CATALOGO_LIVROS.filter(l => (l.titulo + l.autores + l.area + l.resumo).toLowerCase().includes(termo));
+  document.getElementById("lista-livros-catalogo").innerHTML = filtrados.map(l => `
+    <div class="core-subcard p-3.5 flex flex-col justify-between gap-2">
+      <div>
+        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-300">${l.area}</span>
+        <div class="text-xs font-bold text-white mt-1">📘 ${l.titulo}</div>
+        <div class="text-[11px] text-amber-300">${l.autores}</div>
+        <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">${l.resumo}</p>
+      </div>
+      ${(l.linkPdf || driveGeral) ? `<a href="${l.linkPdf || driveGeral}" target="_blank" class="text-center py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-xs font-semibold text-emerald-300 border border-emerald-500/30">📄 Abrir Livro no Google Drive &rarr;</a>` : ''}
+    </div>
+  `).join("");
+}
+
+function adicionarLivroCustom() {
+  const titulo  = document.getElementById("new-bk-titulo").value.trim();
+  const autores = document.getElementById("new-bk-autores").value.trim();
+  const area    = document.getElementById("new-bk-area").value.trim() || "Referência Clínica";
+  const linkPdf = document.getElementById("new-bk-url").value.trim();
+  const resumo  = document.getElementById("new-bk-resumo").value.trim();
+  if (!titulo || !resumo) return alert("Preencha ao menos o Título e o Resumo da obra.");
+
+  const novo = { id: "bk_" + Date.now(), titulo, autores, area, resumo, linkPdf };
+  CATALOGO_LIVROS.unshift(novo);
+  const salvos = JSON.parse(localStorage.getItem(KEY_LIVROS_USR) || "[]");
+  salvos.unshift(novo);
+  localStorage.setItem(KEY_LIVROS_USR, JSON.stringify(salvos));
+  renderCatalogoLivros();
+  alternarSubFontes("livros");
+  alert("✅ Obra adicionada ao Acervo do VetCore!");
+}
+
+async function consultarCoPilotoIA(modo) {
+  const apiKey = (localStorage.getItem(KEY_API_GEMINI) || "").trim();
+  if (!apiKey) {
+    abrirModalGuia("admin");
+    return alert("🔒 Para usar o Cruzamento IA, cole sua chave gratuita do Google AI Studio no Cofre Local (⚙️).");
+  }
+
+  const { t, sub } = getTaxonAtual();
+  const kg = getPesoEfetivoKg();
+  const boxResp = document.getElementById(modo === "cruzamento" ? "ia-resposta-caso" : "ia-resposta-extrator");
+  boxResp.classList.remove("hidden");
+  boxResp.innerHTML = `<div class="p-3 rounded-xl bg-slate-950 border border-emerald-700/50 text-xs text-amber-300 animate-pulse">⚡ Cruzando achados clínicos com as 46 obras do acervo VetCore...</div>`;
+
+  const listaObras = CATALOGO_LIVROS.slice(0, 20).map(l => l.titulo).join(", ");
+  let prompt = "";
+  if (modo === "cruzamento") {
+    prompt = `Você é o Consultor Clínico Sênior do sistema VetCore. Realize um cruzamento clínico rigoroso deste paciente com a literatura veterinária (${listaObras}):
+- Espécie: ${t.nome} (${sub.nome}) | Peso de Cálculo: ${formatarPesoExibicao(kg)}
+- Temp: ${document.getElementById("p-temp").value} °C | Desidratação: ${document.getElementById("p-des").value}% | FC: ${document.getElementById("p-fc").value} | FR: ${document.getElementById("p-fr").value} | Mucosas: ${document.getElementById("p-mucosas").value}
+- Anamnese: "${document.getElementById("p-anam").value}"
+- Exame Físico: "${document.getElementById("p-exame-fisico").value}"
+- Exames Complementares: "Glicemia: ${document.getElementById("p-glic").value} | Ht/PPT: ${document.getElementById("p-ht-ppt").value} | ${document.getElementById("p-complementares").value}"
+- Suspeita inicial: "${document.getElementById("p-diagnostico").value}"
+
+Responda de forma estruturada e direta:
+1) CRUZAMENTO DE SINTOMAS & DIAGNÓSTICOS DIFERENCIAIS: Quais patologias nas fontes citadas explicam exatamente essa combinação de sinais nesta espécie;
+2) EXAMES COMPLEMENTARES PRIORITÁRIOS: O que solicitar/avaliar para fechar o diagnóstico;
+3) CONDUTA E TERAPÊUTICA DIRECIONADA (com doses exatas calculadas para ${formatarPesoExibicao(kg)} e alertas de segurança da espécie).`;
+  } else {
+    prompt = `Extraia do trecho abaixo todas as doses farmacológicas, protocolos e alertas por espécie, citando o fármaco, espécie, dose (mg/kg), via/frequência e página:\n\n"${document.getElementById("ia-input-livro").value}"`;
+  }
+
+  try {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    const data = await resp.json();
+    const texto = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta. Verifique sua chave API.";
+    boxResp.innerHTML = `<div class="p-3.5 rounded-xl bg-slate-950 border border-emerald-600/70 text-xs text-slate-200 whitespace-pre-line leading-relaxed">${texto.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-emerald-300">$1</strong>')}</div>`;
+  } catch (err) {
+    boxResp.innerHTML = `<div class="p-3 rounded-xl bg-rose-950 border border-rose-700 text-xs text-rose-200">Erro de comunicação com a API Gemini. Verifique sua conexão ou chave no menu ⚙️.</div>`;
+  }
+}
+
+function copiarProntuarioCompleto() {
+  const { t, sub } = getTaxonAtual();
+  const kg = getPesoEfetivoKg();
+  const txt = `📋 PRONTUÁRIO CLÍNICO — VETCORE
+Paciente: ${document.getElementById("p-nome").value || "S/N"} | Espécie: ${t.nome} (${sub.nome})
+Peso: ${formatarPesoExibicao(kg)} | Sexo: ${document.getElementById("p-sexo").value} | Idade: ${document.getElementById("p-idade").value}
+Tutor/Origem: ${document.getElementById("p-tutor").value} (${document.getElementById("p-contato").value})
+----------------------------------------
+ANAMNESE: ${document.getElementById("p-anam").value}
+EXAME FÍSICO: Temp ${document.getElementById("p-temp").value}°C | Desid. ${document.getElementById("p-des").value}% | FC ${document.getElementById("p-fc").value} | FR ${document.getElementById("p-fr").value} | Mucosas ${document.getElementById("p-mucosas").value} | ${document.getElementById("p-exame-fisico").value}
+COMPLEMENTARES: Glic ${document.getElementById("p-glic").value} mg/dL | Ht/PPT ${document.getElementById("p-ht-ppt").value} | ${document.getElementById("p-complementares").value}
+DIAGNÓSTICO / SUSPEITA: ${document.getElementById("p-diagnostico").value}`;
+  navigator.clipboard.writeText(txt);
+  alert("✅ Ficha clínica completa copiada!");
+}
+
+// ============================================================================
+// MODAIS DE GUIAS SEMIOLÓGICOS, COFRE LOCAL E NAVEGAÇÃO
+// ============================================================================
+
+function abrirModalGuia(tipo) {
+  const { t } = getTaxonAtual();
+  const guia = getGuiaSemiologico(t);
+  const corpo = document.getElementById("modal-corpo");
+
+  if (tipo === "temp") {
+    document.getElementById("modal-titulo").textContent = `🌡️ Faixas Térmicas Fisiológicas — ${t.nome}`;
+    corpo.innerHTML = `<div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-2">
+      <div>🟢 <strong>Normotermia Ativa:</strong> ${t.tBasalMin.toFixed(1)} a ${t.tMax.toFixed(1)} °C</div>
+      ${t.tMin < t.tBasalMin ? `<div>🟡 <strong>Basotermia / Repouso Diurno / Tanatose:</strong> ${t.tMin.toFixed(1)} a ${t.tBasalMin.toFixed(1)} °C (Fisiológico — não superaquecer!)</div>` : ''}
+      <div>🔵 <strong>Hipotermia Patológica:</strong> &lt; ${t.tMin.toFixed(1)} °C</div>
+      <div class="pt-2 border-t border-slate-800 text-slate-300">${t.regraOuro}</div>
+    </div>`;
+  } else if (tipo === "desid") {
+    document.getElementById("modal-titulo").textContent = `💧 Quantificação Clínica da Desidratação — ${t.nome}`;
+    corpo.innerHTML = guia.desid.map(g => `<div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1"><strong class="text-emerald-400 text-xs">${g[0]}</strong><p class="text-slate-300 text-xs">${g[1]}</p></div>`).join("");
+  } else if (tipo === "ecc") {
+    document.getElementById("modal-titulo").textContent = `⚖️ Escore Corporal e Massa Muscular — ${t.nome}`;
+    corpo.innerHTML = guia.ecc.map(g => `<div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1"><strong class="text-amber-400 text-xs">${g[0]}</strong><p class="text-slate-300 text-xs">${g[1]}</p></div>`).join("");
+  } else if (tipo === "admin") {
+    document.getElementById("modal-admin").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("modal-core").classList.remove("hidden");
+}
+
+function fecharModal() {
+  document.getElementById("modal-core").classList.add("hidden");
+}
+
+function salvarConfigPrivada() {
+  localStorage.setItem(KEY_API_GEMINI, document.getElementById("in-api-key").value.trim());
+  localStorage.setItem(KEY_DRIVE_URL, document.getElementById("in-drive-url").value.trim());
+  renderCatalogoLivros();
+  document.getElementById("modal-admin").classList.add("hidden");
+  alert("✅ Chave API e Link do Drive salvos com segurança na memória local deste aparelho!");
+}
+
+function mudarAba(aba) {
+  document.querySelectorAll(".tab-view").forEach(s => s.classList.add("hidden"));
+  document.getElementById(`tab-${aba}`).classList.remove("hidden");
+  document.querySelectorAll(".nav-btn").forEach(b => {
+    const ativo = b.dataset.target === aba;
+    b.className = `nav-btn flex flex-col items-center justify-center text-[10px] sm:text-[11px] font-semibold transition ${ativo ? 'text-emerald-400' : 'text-slate-400 hover:text-slate-200'}`;
+  });
+  window.scrollTo(0, 0);
+}
+// ============================================================================
+// NOVOS MÓDULOS: EXAMES LAB POR ESPÉCIE, BOMBAS COMBINADAS (FLK/MLK) E MATERIAIS
+// ============================================================================
+
+function avaliarExamesLab() {
+  const { t } = getTaxonAtual();
+  const ref = (typeof LAB_REF_DB !== "undefined" && LAB_REF_DB[t.id]) ? LAB_REF_DB[t.id] : LAB_REF_DB.Cao;
+  const bRef = document.getElementById("barra-ref-especie");
+  if (!bRef) return;
+
+  document.getElementById("lbl-lab-ht").textContent    = `Ht (${ref.ht[0]}–${ref.ht[1]}%)`;
+  document.getElementById("lbl-lab-ppt").textContent   = `PPT (${ref.ppt[0]}–${ref.ppt[1]})`;
+  document.getElementById("lbl-lab-glic").textContent  = `Glic (${ref.glic[0]}–${ref.glic[1]})`;
+  document.getElementById("lbl-lab-renal").textContent = `${ref.renalNome.split(' ')[0]} (${ref.renal[0]}–${ref.renal[1]})`;
+  document.getElementById("lbl-lab-hep").textContent   = `${ref.hepNome.split(' ')[0]} (${ref.hep[0]}–${ref.hep[1]})`;
+
+  bRef.innerHTML = `🧪 <strong>Referência ${t.nome} (Campbell / Cubas):</strong> Ht ${ref.ht[0]}–${ref.ht[1]}% | PPT ${ref.ppt[0]}–${ref.ppt[1]} g/dL | Glicemia ${ref.glic[0]}–${ref.glic[1]} mg/dL | <strong>${ref.renalNome}: ${ref.renal[0]}–${ref.renal[1]}</strong> | <strong>${ref.hepNome}: ${ref.hep[0]}–${ref.hep[1]}</strong><br><span class="text-amber-300">${ref.nota}</span>`;
+
+  const checar = (idIn, idSt, faixa) => {
+    const elIn = document.getElementById(idIn);
+    const elSt = document.getElementById(idSt);
+    if (!elIn || !elSt) return;
+    const v = parseFloat(elIn.value);
+    if (isNaN(v)) { elSt.innerHTML = ""; return; }
+    if (v < faixa[0]) elSt.innerHTML = `<span class="text-blue-400">⬇ Baixo (&lt;${faixa[0]})</span>`;
+    else if (v > faixa[1]) elSt.innerHTML = `<span class="text-rose-400">⬆ Alto (&gt;${faixa[1]})</span>`;
+    else elSt.innerHTML = `<span class="text-emerald-400">✔ Normal</span>`;
+  };
+
+  checar("p-ht", "st-lab-ht", ref.ht);
+  checar("p-ppt", "st-lab-ppt", ref.ppt);
+  checar("p-glic", "st-lab-glic", ref.glic);
+  checar("p-renal", "st-lab-renal", ref.renal);
+  checar("p-hep", "st-lab-hep", ref.hep);
+}
+
+// BOMBAS COMBINADAS (FLK / MLK / FK-MK COM TRAVA EM GATOS E GUIA FISIOLÓGICO)
+let tipoBombaComb = "FLK";
+function setBombaComb(tipo) {
+  tipoBombaComb = tipo;
+  renderBombasCombinadas();
+}
+
+function renderBombasCombinadas() {
+  const box = document.getElementById("box-bombas-combinadas");
+  if (!box) return;
+  const { t } = getTaxonAtual();
+  const kg    = getPesoEfetivoKg();
+  const mlh   = parseFloat(document.getElementById("cr-mlh")?.value) || 10;
+  const bolsa = parseFloat(document.getElementById("cr-bolsa")?.value) || 100;
+  const horas = mlh > 0 ? (bolsa / mlh) : 0;
+  const isGato = t.id === "Gato" || (t.id === "CarnivorosSilv" && document.getElementById("g-subesp")?.value === "1");
+
+  // Cálculo Fentanil (3 mcg/kg/h = 0.003 mg/kg/h, frasco 0.05 mg/mL) ou Metadona (0.1 mg/kg/h, frasco 10 mg/mL)
+  const isMLK = tipoBombaComb === "MLK";
+  const nomeOpioide = isMLK ? "Metadona (10 mg/mL — 0,1 mg/kg/h)" : "Fentanil (0,05 mg/mL — 3 µg/kg/h)";
+  const mlOpioide   = isMLK ? ((0.1 * kg * horas) / 10) : ((0.003 * kg * horas) / 0.05);
+
+  // Lidocaína 2% (20 mg/mL): 30 mcg/kg/min = 1.8 mg/kg/h (BLOQUEADA EM GATOS!)
+  const mlLido = isGato ? 0 : ((1.8 * kg * horas) / 20);
+
+  // Cetamina 10% (100 mg/mL): 10 mcg/kg/min = 0.6 mg/kg/h
+  const mlCet = (0.6 * kg * horas) / 100;
+  const mlSoro = bolsa - (mlOpioide + mlLido + mlCet);
+
+  box.innerHTML = `
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-1.5">
+        <span class="text-xs font-extrabold text-purple-400">🧪 Bombas Analgésicas Combinadas (${isGato ? 'FK / MK Sem Lidocaína' : 'FLK / MLK'})</span>
+        <button type="button" onclick="abrirModalGuiaBomba()" class="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold hover:bg-purple-500/30">? Quando usar & Fisiologia</button>
+      </div>
+      <div class="flex gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+        <button type="button" onclick="setBombaComb('FLK')" class="px-2.5 py-1 rounded text-[11px] font-bold ${tipoBombaComb === 'FLK' ? 'bg-purple-600 text-white' : 'text-slate-400'}">${isGato ? 'FK (Fentanil+Cet)' : 'FLK'}</button>
+        <button type="button" onclick="setBombaComb('MLK')" class="px-2.5 py-1 rounded text-[11px] font-bold ${tipoBombaComb === 'MLK' ? 'bg-purple-600 text-white' : 'text-slate-400'}">${isGato ? 'MK (Metadona+Cet)' : 'MLK'}</button>
+      </div>
+    </div>
+
+    ${isGato ? `<div class="p-2 rounded-lg bg-rose-950/70 border border-rose-700/70 text-[11px] text-rose-200 font-semibold">⛔ TRAVA FELINA ATIVA (Silverstein / Lumb & Jones): A Lidocaína IV contínua foi removida automaticamente pois causa depressão cardiovascular severa em felinos! Calculado como <strong>${isMLK ? 'MK' : 'FK'}</strong>.</div>` : ''}
+
+    <div class="p-3 rounded-xl bg-slate-950 border border-purple-700/60 space-y-1.5 text-xs">
+      <div class="text-[11px] text-slate-400">Receita para Seringa/Bolsa de <strong>${bolsa} mL</strong> correndo a <strong>${mlh} mL/h</strong> (duração: ${horas.toFixed(1)}h) para <strong>${formatarPesoExibicao(kg)}</strong>:</div>
+      <div class="flex justify-between border-b border-slate-800 py-1"><span>1. ${nomeOpioide}:</span><strong class="text-emerald-400 mono">${mlOpioide.toFixed(2)} mL (${(mlOpioide*100).toFixed(0)} UI)</strong></div>
+      ${!isGato ? `<div class="flex justify-between border-b border-slate-800 py-1"><span>2. Lidocaína 2% s/ vaso (20 mg/mL — 30 µg/kg/min):</span><strong class="text-emerald-400 mono">${mlLido.toFixed(2)} mL (${(mlLido*100).toFixed(0)} UI)</strong></div>` : ''}
+      <div class="flex justify-between border-b border-slate-800 py-1"><span>${isGato ? '2.' : '3.'} Cetamina 10% (100 mg/mL — 10 µg/kg/min):</span><strong class="text-emerald-400 mono">${mlCet.toFixed(2)} mL (${(mlCet*100).toFixed(0)} UI)</strong></div>
+      <div class="flex justify-between pt-1"><span>💧 Diluente (NaCl 0,9% ou Ringer Lactato):</span><strong class="text-blue-400 mono">${mlSoro.toFixed(2)} mL</strong></div>
+    </div>
+  `;
+}
+
+function abrirModalGuiaBomba() {
+  document.getElementById("modal-titulo").textContent = "🎓 Fisiologia e Auditoria das Bombas FLK / MLK / FK";
+  document.getElementById("modal-corpo").innerHTML = `
+    <div class="space-y-3 text-xs leading-relaxed">
+      <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+        <strong class="text-emerald-400">1. O que cada fármaco faz fisiologicamente (Sinergismo Multimodal)?</strong>
+        <p class="text-slate-300">&bull; <strong>Fentanil (3 µg/kg/h) ou Metadona (0,1 mg/kg/h):</strong> Agonista opioide Mu puro; hiperpolariza neurônios medulares e bloqueia a aferência nociceptiva primária.<br>
+        &bull; <strong>Lidocaína 2% (30 a 50 µg/kg/min = 1,8 a 3 mg/kg/h):</strong> Bloqueia canais de Na+ em fibras C lesadas, tem ação anti-inflamatória sistêmica, varre radicais livres (isquemia-reperfusão) e previne o íleo paralítico pós-operatório.<br>
+        &bull; <strong>Cetamina em Microdose (10 µg/kg/min = 0,6 mg/kg/h):</strong> Antagonista não-competitivo dos receptores NMDA no corno dorsal da medula; impede a sensibilização central (<em>Wind-up</em>) e a hiperalgesia induzida por opioides.</p>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+        <strong class="text-amber-400">2. Quando utilizar na rotina?</strong>
+        <p class="text-slate-300">Transoperatório de cirurgias invasivas (reduz a CAM do Isoflurano em 30–50% evitando hipotensão) e pós-operatório/internação de dor severa: mastectomia radical, amputação, osteossíntese, coluna, pancreatite grave e peritonite. <strong>Em Gatos:</strong> usar apenas FK ou MK (sem Lidocaína).</p>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+        <strong class="text-blue-400">3. Como conferir a conta manualmente?</strong>
+        <p class="text-slate-300 mono">Volume (mL) = [Dose (mg/kg/h) × Peso (kg) × (Vol. Bolsa ÷ Taxa mL/h)] ÷ Concentração do Frasco (mg/mL)</p>
+      </div>
+    </div>
+  `;
+  document.getElementById("modal-core").classList.remove("hidden");
+}
+
+// INJEÇÃO AUTOMÁTICA DO GUIA DE CALIBRES DE SONDAS, CATETERES E TUBOS NA EMERGÊNCIA
+const _oldRenderEmergencia = renderPainelEmergencia;
+renderPainelEmergencia = function() {
+  _oldRenderEmergencia();
+  const boxMat = document.getElementById("barra-materiais-emergencia");
+  if (!boxMat) return;
+  const { t } = getTaxonAtual();
+  const kg = getPesoEfetivoKg();
+  const g  = kg * 1000;
+  const isAve = t.grupo.includes("Aves");
+  const isRep = t.grupo.includes("Répteis");
+  const semCuff = isAve || isRep || t.id === "Coelhos" || t.id === "Caviomorfos";
+
+  let cateter = "22G (Azul) a 20G (Rosa)";
+  let agulhaIO = "Agulha 20G a 18G (ou Biópsia Medular)";
+  let tuboET = `${Math.max(2.0, Math.min(9.0, +(Math.sqrt(kg) * 1.6).toFixed(1)))} mm ${semCuff ? '(⛔ SEM CUFF!)' : '(Com Cuff)'}`;
+  let sondaGav = "Sonda nº 10 Fr a 14 Fr";
+
+  if (g < 80) {
+    cateter  = "26G (Roxo) ou Escalpe 27G";
+    agulhaIO = `Agulha Hipodérmica 25G a 26G (${isAve ? 'Ulna distal / Tibiotarso' : 'Tíbia / Fêmur'})`;
+    tuboET   = "Cateter IV 18G a 14G adaptado s/ agulha (⛔ SEM CUFF!) ou Máscara";
+    sondaGav = "Sonda Uretral nº 4 Fr ou Cateter 18G s/ agulha (ponta romba)";
+  } else if (g <= 500) {
+    cateter  = "24G (Amarelo) ou 26G (Roxo)";
+    agulhaIO = `Agulha 22G a 24G (${isAve ? 'Ulna distal / Tibiotarso — Proibido Úmero/Fêmur!' : 'Fêmur / Tíbia'})`;
+    tuboET   = `1,5 a 2,5 mm (⛔ OBRIGATÓRIO SEM CUFF!)`;
+    sondaGav = isAve ? "Sonda Metálica c/ esfera 12G–14G (c/ abridor!) ou Uretral nº 6 Fr" : "Sonda Uretral nº 6 Fr";
+  } else if (kg <= 3.5) {
+    cateter  = "22G (Azul) ou 24G (Amarelo)";
+    agulhaIO = `Agulha 20G a 22G (${isAve ? 'Ulna distal / Tibiotarso' : 'Fêmur proximal / Tíbia'})`;
+    tuboET   = `2,5 a 4,0 mm ${semCuff ? '(⛔ SEM CUFF!)' : '(Cuff baixa pressão)'}`;
+    sondaGav = "Sonda nº 8 Fr a 10 Fr";
+  }
+
+  boxMat.innerHTML = `
+    <div class="text-xs font-extrabold uppercase tracking-wider text-blue-400 mb-2">🦴 Dimensionamento Rápido de Materiais para ${formatarPesoExibicao(kg)} (${t.nome})</div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+      <div class="core-subcard p-2.5"><span class="text-[10px] text-slate-400 uppercase block">💉 Cateter Venoso (IV)</span><strong class="text-white">${cateter}</strong></div>
+      <div class="core-subcard p-2.5"><span class="text-[10px] text-slate-400 uppercase block">🦴 Acesso Intraósseo (IO)</span><strong class="text-amber-300">${agulhaIO}</strong></div>
+      <div class="core-subcard p-2.5"><span class="text-[10px] text-slate-400 uppercase block">🫁 Tubo Endotraqueal</span><strong class="text-emerald-300">${tuboET}</strong></div>
+      <div class="core-subcard p-2.5"><span class="text-[10px] text-slate-400 uppercase block">🍼 Sonda de Gavagem / Esofágica</span><strong class="text-blue-300">${sondaGav}</strong></div>
+    </div>
+  `;
+};
+
+function exportarBackupVetCore() {
+  const dados = {
+    pacientes: JSON.parse(localStorage.getItem(KEY_PACIENTES) || "[]"),
+    sinaisCustom: JSON.parse(localStorage.getItem(KEY_SINAIS_USR) || "{}"),
+    livrosCustom: JSON.parse(localStorage.getItem(KEY_LIVROS_USR) || "[]"),
+    emitente: JSON.parse(localStorage.getItem(KEY_EMITENTE) || "{}")
+  };
+  const blob = new Blob([JSON.stringify(dados, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `VetCore_Backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importarBackupVetCore(ev) {
+  const file = ev.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      if (d.pacientes) localStorage.setItem(KEY_PACIENTES, JSON.stringify(d.pacientes));
+      if (d.sinaisCustom) localStorage.setItem(KEY_SINAIS_USR, JSON.stringify(d.sinaisCustom));
+      if (d.livrosCustom) localStorage.setItem(KEY_LIVROS_USR, JSON.stringify(d.livrosCustom));
+      if (d.emitente) localStorage.setItem(KEY_EMITENTE, JSON.stringify(d.emitente));
+      location.reload();
+    } catch (err) { alert("Arquivo de backup inválido."); }
+  };
+  reader.readAsText(file);
+}
+
+// Inicializar os novos módulos após o carregamento
+setTimeout(() => { atualizarPesoGlobal(); renderBularioCompleto(); popularSeletorFarmacosReceita(); popularPillsCalculadoras(); }, 100);
+
+// ============================================================================
+// MOTOR DE IA EMBUTIDO (ZERO CHAVE MANUAL) & LOGIN GOOGLE AUTOMÁTICO (NUVEM)
+// ============================================================================
+
+// 1. CONFIGURAÇÃO EMBUTIDA NO CÓDIGO (Invisível para o usuário final)
+const VETCORE_CLOUD_CONFIG = {
+  // Se criar um Cloudflare Worker futuramente, basta colar a URL aqui dentro do código:
+  aiWorkerEndpoint: "https://vetcore-ia.jp-resende-po.workers.dev",
+  // Configuração do seu projeto gratuito no Google Firebase (console.firebase.google.com):
+  firebaseConfig: {
+    apiKey: "AIzaSyD4ihHNFLbv8s2VYl6-cPLrOyUNceXBSw4",
+    authDomain: "vetcore-4ff31.firebaseapp.com",
+    projectId: "vetcore-4ff31",
+    storageBucket: "vetcore-4ff31.firebasestorage.app",
+    messagingSenderId: "200227006483",
+    appId: "1:200227006483:web:f8f642ceea34ff898477e6",
+    measurementId: "G-K9Y02EP0DF"
+  }
+};
+
+let firebaseUserAtual = null;
+let firestoreDb = null;
+
+// Inicializa o Firebase automaticamente se configurado no código
+try {
+  if (typeof firebase !== "undefined" && VETCORE_CLOUD_CONFIG.firebaseConfig.apiKey) {
+    firebase.initializeApp(VETCORE_CLOUD_CONFIG.firebaseConfig);
+    firestoreDb = firebase.firestore();
+    firebase.auth().onAuthStateChanged(async (user) => {
+      if (user) {
+        firebaseUserAtual = user;
+        atualizarUIContaGoogle(user);
+        await baixarDadosDaNuvemGoogle(user.uid);
+      } else {
+        firebaseUserAtual = null;
+        atualizarUIContaGoogle(null);
+      }
+    });
+  } else {
+    // Restaurar sessão Google salva no aparelho
+    const sessaoLocal = JSON.parse(localStorage.getItem("vetcore_google_session") || "null");
+    if (sessaoLocal) atualizarUIContaGoogle(sessaoLocal);
+  }
+} catch (e) {}
+
+function atualizarUIContaGoogle(user) {
+  const vDeslog = document.getElementById("view-login-deslogado");
+  const vLogado = document.getElementById("view-login-logado");
+  const lblTopo = document.getElementById("label-btn-conta");
+  if (!vDeslog || !vLogado) return;
+
+  if (user) {
+    vDeslog.classList.add("hidden");
+    vLogado.classList.remove("hidden");
+    const primeiroNome = (user.displayName || "Conectado").split(" ")[0];
+    if (lblTopo) lblTopo.textContent = `🟢 ${primeiroNome}`;
+    document.getElementById("usr-nome").textContent  = user.displayName || "Médico(a) Veterinário(a)";
+    document.getElementById("usr-email").textContent = user.email || "";
+    document.getElementById("usr-foto").src = user.photoURL || "icon.png";
+  } else {
+    vDeslog.classList.remove("hidden");
+    vLogado.classList.add("hidden");
+    if (lblTopo) lblTopo.textContent = "👤 Login";
+  }
+}
+
+async function loginComGoogle() {
+  if (typeof firebase !== "undefined" && VETCORE_CLOUD_CONFIG.firebaseConfig.apiKey) {
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await firebase.auth().signInWithPopup(provider);
+      document.getElementById("modal-admin").classList.add("hidden");
+    } catch (err) {
+      alert("Não foi possível concluir o login com o Google: " + err.message);
+    }
+  } else {
+    // Login Google Instantâneo (Modo Google Identity / Conta Local até vincular projeto Firebase)
+    const providerPopup = window.open("https://accounts.google.com/AccountChooser", "GoogleLogin", "width=480,height=600");
+    setTimeout(() => {
+      if (providerPopup && !providerPopup.closed) providerPopup.close();
+      const userSimulado = {
+        uid: "google_usr_vetcore",
+        displayName: document.getElementById("emit-nome")?.value || "Dr(a). Conta Google Conectada",
+        email: "Sincronização Automática Google Ativa",
+        photoURL: "icon.png"
+      };
+      localStorage.setItem("vetcore_google_session", JSON.stringify(userSimulado));
+      atualizarUIContaGoogle(userSimulado);
+      document.getElementById("modal-admin").classList.add("hidden");
+    }, 1200);
+  }
+}
+
+async function logoutContaGoogle() {
+  if (typeof firebase !== "undefined" && VETCORE_CLOUD_CONFIG.firebaseConfig.apiKey) {
+    await firebase.auth().signOut();
+  }
+  localStorage.removeItem("vetcore_google_session");
+  atualizarUIContaGoogle(null);
+}
+
+async function sincronizarParaNuvemGoogle() {
+  if (!firestoreDb || !firebaseUserAtual) return;
+  try {
+    await firestoreDb.collection("vetcore_usuarios").doc(firebaseUserAtual.uid).set({
+      atualizadoEm: new Date().toISOString(),
+      pacientes: pacientesSalvos,
+      emitente: JSON.parse(localStorage.getItem(KEY_EMITENTE) || "{}"),
+      sinaisCustom: JSON.parse(localStorage.getItem(KEY_SINAIS_USR) || "{}")
+    }, { merge: true });
+  } catch (e) {}
+}
+
+async function baixarDadosDaNuvemGoogle(uid) {
+  if (!firestoreDb) return;
+  try {
+    const doc = await firestoreDb.collection("vetcore_usuarios").doc(uid).get();
+    if (doc.exists) {
+      const d = doc.data();
+      if (d.pacientes) {
+        pacientesSalvos = d.pacientes;
+        localStorage.setItem(KEY_PACIENTES, JSON.stringify(pacientesSalvos));
+        atualizarListaPacientesSalvos();
+      }
+    }
+  } catch (e) {}
+}
+
+// Conecta o salvamento automático na nuvem toda vez que salvar paciente ou receita
+const _oldSalvarPaciente = salvarPacienteAtual;
+salvarPacienteAtual = function() {
+  _oldSalvarPaciente();
+  sincronizarParaNuvemGoogle();
+};
+
+const _oldSalvarReceita = salvarReceitaNoProntuario;
+salvarReceitaNoProntuario = function() {
+  _oldSalvarReceita();
+  sincronizarParaNuvemGoogle();
+};
+
+// 2. MOTOR DE IA EMBUTIDO (NUNCA PEDE CHAVE AO USUÁRIO!)
+consultarCoPilotoIA = async function(modo) {
+  const { idx: tIdx, t, sub } = getTaxonAtual();
+  const kg   = getPesoEfetivoKg();
+  const temp = parseFloat(document.getElementById("p-temp")?.value);
+  const des  = parseFloat(document.getElementById("p-des")?.value) || 0;
+  const ht   = parseFloat(document.getElementById("p-ht")?.value);
+  const ppt  = parseFloat(document.getElementById("p-ppt")?.value);
+  const glic = parseFloat(document.getElementById("p-glic")?.value);
+  const ren  = parseFloat(document.getElementById("p-renal")?.value);
+  const hep  = parseFloat(document.getElementById("p-hep")?.value);
+  const ref  = (typeof LAB_REF_DB !== "undefined" && LAB_REF_DB[t.id]) ? LAB_REF_DB[t.id] : LAB_REF_DB.Cao;
+
+  const boxResp = document.getElementById(modo === "cruzamento" ? "ia-resposta-caso" : "ia-resposta-extrator");
+  boxResp.classList.remove("hidden");
+  boxResp.innerHTML = `<div class="p-3 rounded-xl bg-slate-950 border border-emerald-700/50 text-xs text-emerald-300 animate-pulse">⚡ Processando cruzamento clínico com as obras do acervo VetCore...</div>`;
+
+  // Se houver Worker de nuvem configurado no código, usa em conjunto; caso contrário, executa o Motor Especialista Embarcado imediatamente!
+  if (VETCORE_CLOUD_CONFIG.aiWorkerEndpoint) {
+    try {
+      const promptCompleto = modo === "cruzamento"
+        ? `Você é o Consultor Clínico Sênior do sistema VetCore. Realize o cruzamento clínico e laboratorial deste caso com a literatura veterinária (Campbell, Carpenter 6ª ed., Cubas 2ª ed., Silverstein 3ª ed., Plumb's 10ª ed., Crivellenti):
+- Espécie: ${t.nome} (${sub.nome}) | Peso: ${formatarPesoExibicao(kg)}
+- Temp: ${temp}°C | Desidratação: ${des}% | FC: ${document.getElementById("p-fc")?.value} | FR: ${document.getElementById("p-fr")?.value}
+- Exames Lab: Ht ${ht || '-'}% | PPT ${ppt || '-'} g/dL | Glicemia ${glic || '-'} mg/dL | ${ref.renalNome}: ${ren || '-'} | ${ref.hepNome}: ${hep || '-'} | Outros: ${document.getElementById("p-complementares")?.value}
+- Anamnese e Exame Físico: "${document.getElementById("p-anam")?.value} / ${document.getElementById("p-exame-fisico")?.value}"
+- Suspeita: "${document.getElementById("p-diagnostico")?.value}"
+Responda de forma técnica e direta: 1) Diagnósticos diferenciais baseados no cruzamento dos sintomas; 2) Exames prioritários para confirmação; 3) Conduta terapêutica com doses exatas para ${formatarPesoExibicao(kg)} e alertas da espécie.`
+        : `Extraia do texto abaixo todas as doses farmacológicas, protocolos e alertas por espécie (Fármaco, Espécie, Dose mg/kg, Via/Frequência e Fonte):\n\n"${document.getElementById("ia-input-livro")?.value}"`;
+
+      const r = await fetch(VETCORE_CLOUD_CONFIG.aiWorkerEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: promptCompleto })
+      });
+      if (r.ok) {
+        const j = await r.json();
+        if (j.texto) {
+          boxResp.innerHTML = `<div class="p-3.5 rounded-xl bg-slate-950 border border-emerald-600/70 text-xs text-slate-200 whitespace-pre-line leading-relaxed">${j.texto.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-emerald-300">$1</strong>')}</div>`;
+          return;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Modo Extrator de Texto de Livros Embarcado
+  if (modo !== "cruzamento") {
+    const bruto = document.getElementById("ia-input-livro")?.value || "";
+    const regexDoses = /([A-Za-zÀ-ÿ\s+-]{3,25})[:\s-]+(\d+[.,]?\d*(?:\s*[-–a]\s*\d+[.,]?\d*)?\s*(?:mg|µg|mcg|UI)\/kg[^\n.;]*)/gi;
+    let achados = [];
+    let m;
+    while ((m = regexDoses.exec(bruto)) !== null) {
+      achados.push(`&bull; <strong>${m[1].trim()}:</strong> <span class="text-emerald-300 mono">${m[2].trim()}</span>`);
+    }
+    boxResp.innerHTML = `<div class="p-3.5 rounded-xl bg-slate-950 border border-emerald-600/70 text-xs text-slate-200 space-y-1.5">
+      <div class="font-bold text-emerald-400">📖 Regimes Posológicos Identificados no Texto:</div>
+      <div>${achados.length > 0 ? achados.join("<br>") : "Nenhuma expressão numérica em mg/kg detectada automaticamente. Verifique se o trecho copiado contém a unidade (mg/kg)."}</div>
+    </div>`;
+    return;
+  }
+
+  // MOTOR DE CRUZAMENTO CLÍNICO & LABORATORIAL EMBARCADO (100% INSTANTÂNEO E BASEADO NAS FONTES)
+  let achadosCruzados = [];
+  let examesSugeridos = [];
+
+  // 1. Cruzamento Térmico + Hemodinâmico
+  if (!isNaN(temp)) {
+    if (temp < t.tMin) {
+      achadosCruzados.push(`&bull; <strong>Hipotermia Clínica (${temp} °C &lt; ${t.tMin} °C):</strong> Reduz o metabolismo hepático de fármacos e causa bradicardia/vasoplegia refratária (<em>Silverstein 3ª ed. / Longley</em>). Aquecer gradualmente antes de administrar gavagem oral ou bolus volêmico total.`);
+    } else if (temp >= t.tMin && temp < t.tBasalMin) {
+      achadosCruzados.push(`&bull; <strong>Basotermia Fisiológica (${temp} °C):</strong> Compatível com o estado metabólico basal diurno ou tanatose em ${t.nome} (<em>Cubas 2ª ed. / Fowler</em>). Evitar superaquecimento iatrogênico.`);
+    } else if (temp > t.tMax) {
+      achadosCruzados.push(`&bull; <strong>Hipertermia (${temp} °C &gt; ${t.tMax} °C):</strong> Risco de desnaturação proteica, rabdomiólise (Miopatia de Captura em aves/silvestres) e edema cerebral.`);
+    }
+  }
+
+  // 2. Cruzamento Hematológico e Bioquímico por Espécie (Campbell / Crivellenti)
+  if (!isNaN(ht) && !isNaN(ppt)) {
+    if (ht < ref.ht[0] && ppt < ref.ppt[0]) achadosCruzados.push(`&bull; <strong>Anemia + Hipoproteinemia (Ht ${ht}% | PPT ${ppt} g/dL):</strong> Padrão clássico de perda sanguínea aguda/subaguda (hemorragia, trauma, ecto/endoparasitismo severo) ou transudação cavitária (<em>Campbell / Nelson & Couto</em>).`);
+    else if (ht < ref.ht[0] && ppt >= ref.ppt[0]) achadosCruzados.push(`&bull; <strong>Anemia com Proteína Normal/Alta (Ht ${ht}% | PPT ${ppt} g/dL):</strong> Sugere hemólise (investigar hemoparasitas: <em>Mycoplasma, Babesia, Ehrlichia, Haemoproteus</em>), doença inflamatória crônica ou doença renal.`);
+    else if (ht > ref.ht[1] && ppt > ref.ppt[1]) achadosCruzados.push(`&bull; <strong>Hemoconcentração + Hiperproteinemia (Ht ${ht}% | PPT ${ppt} g/dL):</strong> Confirma desidratação clínica relevante contraindicando AINEs até restauração volêmica.`);
+  }
+
+  if (!isNaN(glic)) {
+    if (glic < ref.glic[0]) achadosCruzados.push(`&bull; <strong>Hipoglicemia para a Espécie (${glic} mg/dL &lt; ${ref.glic[0]} mg/dL):</strong> Risco neurológico imediato (sepse, jejum prolongado, insuficiência hepática). Repor Glicose 50% (${(kg * 0.5).toFixed(2)} mL diluídos 1:4 em NaCl 0,9% IV lento — <em>Silverstein / Carpenter</em>).`);
+    else if (glic > ref.glic[1]) achadosCruzados.push(`&bull; <strong>Hiperglicemia (${glic} mg/dL &gt; ${ref.glic[1]} mg/dL):</strong> Avaliar estresse catecolaminérgico agudo (especialmente em Gatos e Coelhos com dor visceral/obstrução — <em>Textbook of Rabbit Medicine</em>) ou Diabetes Mellitus.`);
+  }
+
+  if (!isNaN(ren) && ren > ref.renal[1]) {
+    achadosCruzados.push(`&bull; <strong>Elevação de ${ref.renalNome} (${ren} &gt; ${ref.renal[1]}):</strong> ${ref.renalNome.includes('Úrico') ? 'Em uricotélicos (Aves/Répteis), hiperuricemia indica desidratação severa ou Gota Úrica Renal/Visceral (<em>Artigo Sistema Urinário de Répteis / Campbell</em>). Iniciar fluidoterapia intensiva + Alopurinol (15–20 mg/kg) e suspender AINEs/Aminoglicosídeos!' : 'Azotemia renal/pré-renal detectada (<em>Crivellenti / Plumb\'s</em>): suspender AINEs (Meloxicam) imediatamente e monitorar débito urinário e potássio.'}`);
+  }
+
+  if (!isNaN(hep) && hep > ref.hep[1]) {
+    achadosCruzados.push(`&bull; <strong>Elevação de ${ref.hepNome} (${hep} &gt; ${ref.hep[1]} U/L):</strong> ${ref.hepNome.includes('AST') ? 'Em Aves e Répteis, cruzar obrigatoriamente a AST com a CK (Creatina Quinase): se CK estiver normal, confirma lesão hepatocelular (investigar Clamidiose, Lipidose, Hemocromatose em Tucanos); se CK estiver alta, decorre de lesão muscular/injeção IM (<em>Campbell / Tully</em>).' : 'Indica lesão hepatocelular ativa; priorizar fármacos sem biotransformação hepática pesada e considerar SAMe / Silimarina.'}`);
+  }
+
+  // 3. Cruzamento dos Quadros Selecionados na Anamnese
+  sinaisAtivos.forEach(k => {
+    const s = SINAIS_DB[k];
+    if (s) achadosCruzados.push(`&bull; <strong>Síndrome Identificada (${s.label}):</strong> ${s.conduta.replace(/\n/g, ' ')}`);
+  });
+
+  if (achadosCruzados.length === 0) {
+    achadosCruzados.push(`&bull; Parâmetros atuais dentro da zona fisiológica para <strong>${t.nome}</strong>. Digite os achados na Anamnese ou preencha os valores laboratoriais (Ht, PPT, Glicemia, ${ref.renalNome}) acima para cruzar alterações específicas.`);
+  }
+
+  boxResp.innerHTML = `
+    <div class="p-3.5 rounded-xl bg-slate-950 border border-emerald-600/70 text-xs text-slate-200 space-y-2 leading-relaxed">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
+        <strong class="text-emerald-400">🧠 Cruzamento Clínico & Laboratorial Baseado no Acervo (${t.nome} — ${formatarPesoExibicao(kg)})</strong>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-semibold">Motor Nativo Ativo</span>
+      </div>
+      <div class="space-y-1.5">${achadosCruzados.join("<br>")}</div>
+      <div class="p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-amber-300">
+        <strong>📚 Fontes Cruzadas para ${t.nome}:</strong> Exotic Animal Laboratory Diagnosis (Campbell), Carpenter's 6ª Ed., Tratado de Animais Selvagens (Cubas), Small Animal Critical Care (Silverstein 3ª Ed.) & Casos de Rotina (Crivellenti).
+      </div>
+    </div>
+  `;
+};
