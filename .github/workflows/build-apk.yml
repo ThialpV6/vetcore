@@ -1,61 +1,53 @@
-
-name: Compilar VetCore APK Nativo
+name: Gerar APK Nativo VetCore
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
-  build:
+  build-android:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📦 Clonar Repositório
-        uses: actions/checkout@v7
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
 
-      - name: ⚙️ Configurar Node.js
-        uses: actions/setup-node@v7
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 20
 
-      - name: ☕ Configurar Java
-        uses: actions/setup-java@v6
+      - name: Configurar Java 17 (Android SDK)
+        uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: '21'
+          distribution: 'temurin'
+          java-version: '17'
 
-      - name: 🤖 Configurar Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          packages: 'platform-tools'
-
-      - name: 📱 Instalar Capacitor
+      - name: Preparar arquivos web e Capacitor Android
         run: |
+          mkdir -p www
+          cp index.html database.js app.js icon.png www/
           npm init -y
-          npm install @capacitor/core@8.6.2 @capacitor/cli@8.6.2 @capacitor/android@8.6.2
-
-      - name: 🚀 Configurar Capacitor
-        run: |
-          npx cap init VetCore com.vetcore.app --web-dir "."
-
-      - name: 📲 Adicionar Android
-        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init "VetCore" "br.com.vetcore.app" --web-dir www
           npx cap add android
-          npx cap sync android
 
-      - name: 🔨 Compilar APK
-        working-directory: ./android
+      - name: Aplicar ícone e cores nativas (#0B0F17)
         run: |
+          mkdir -p android/app/src/main/res/drawable
+          cp icon.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png || true
+          cp icon.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png || true
+          cp icon.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png || true
+          cp icon.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || true
+
+      - name: Compilar APK Android Nativo
+        run: |
+          cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: 📤 Disponibilizar APK
-        uses: actions/upload-artifact@v7
+      - name: Disponibilizar VetCore.apk para Download
+        uses: actions/upload-artifact@v4
         with:
-          name: VetCore-APK
+          name: VetCore-APK-Nativo
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
