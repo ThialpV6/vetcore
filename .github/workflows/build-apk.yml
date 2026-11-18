@@ -22,9 +22,12 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: 🚀 Inicializar Capacitor para Android
+      - name: 🚀 Criar Configuração do Capacitor
         run: |
-          npx cap init VetCore com.vetcore.app --web-dir .
+          npx cap init VetCore com.vetcore.app --web-dir "." --ai-no-hooks
+
+      - name: 🤖 Adicionar Plataforma Android
+        run: |
           npx cap add android
 
       - name: 🔨 Compilar APK no Android Studio (Gradle)
