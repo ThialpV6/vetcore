@@ -1711,3 +1711,367 @@ Responda de forma técnica e direta: 1) Diagnósticos diferenciais baseados no c
     </div>
   `;
 };
+// ============================================================================
+// VISUAL CLEAN MOBILE, SUPORTE A UI/KG (PENTABIÓTICO) & CONVERSOR DE UI
+// ============================================================================
+
+// 1. Deixa o Topo do Prontuário Clean no Celular (Alertas em Gavetas Compactas)
+const _oldRecalcularProntuario = recalcularProntuario;
+recalcularProntuario = function() {
+  _oldRecalcularProntuario();
+  const { idx: tIdx, t, sub } = getTaxonAtual();
+  const kgCalc  = getPesoEfetivoKg();
+  const gCalc   = kgCalc * 1000;
+  const des     = parseFloat(document.getElementById("p-des").value) || 0;
+  const manutDia  = kgCalc * t.fluidoManut;
+  const desidMl   = gCalc * (des / 100);
+  const totFluido = manutDia + desidMl;
+  const kcalDia   = t.fatorK * Math.pow(kgCalc, 0.75);
+
+  const cardMet = document.getElementById("card-metabolico");
+  if (cardMet) {
+    cardMet.innerHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <details class="rounded-xl bg-rose-950/40 border border-rose-800/50 text-xs text-rose-200">
+          <summary class="p-2.5 font-bold cursor-pointer select-none">⛔ Ver Restrições & Contraindicações (${t.nome})</summary>
+          <div class="px-3 pb-2.5 pt-1 border-t border-rose-900/50 leading-relaxed">${t.proibido}</div>
+        </details>
+        <details class="rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-slate-300" ${sub.alerta ? 'open' : ''}>
+          <summary class="p-2.5 font-bold cursor-pointer select-none text-emerald-400">🧭 Diretriz Clínica & Acessos (${sub.nome})</summary>
+          <div class="px-3 pb-2.5 pt-1 border-t border-slate-800 space-y-1.5 leading-relaxed">
+            <div>${t.regraOuro}</div>
+            ${sub.alerta ? `<div class="p-2 rounded bg-amber-950/70 border border-amber-700/60 text-amber-200 font-semibold">${sub.alerta}</div>` : ''}
+            <div class="text-[11px] text-slate-400"><strong>💉 Vias:</strong> ${t.vias}<br><strong class="text-emerald-300">🧪 Tubo:</strong> ${t.tuboSangue}</div>
+          </div>
+        </details>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+        <div class="core-subcard p-2.5">
+          <div class="text-[10px] text-slate-400 uppercase">💧 Fluido 24h</div>
+          <div class="text-sm font-extrabold text-emerald-400 mono">${totFluido.toFixed(1)} mL/d</div>
+          <div class="text-[10px] text-slate-400">${(totFluido/24).toFixed(2)} mL/h &bull; q6h: ${(totFluido/4).toFixed(1)} mL</div>
+        </div>
+        <div class="core-subcard p-2.5">
+          <div class="text-[10px] text-slate-400 uppercase">⚡ Bolus Choque</div>
+          <div class="text-sm font-extrabold text-blue-400 mono">${(kgCalc * t.bolusChoque).toFixed(2)} mL</div>
+          <div class="text-[10px] text-slate-400">${t.bolusChoque} mL/kg (Manut ${manutDia.toFixed(0)} + Desid ${desidMl.toFixed(0)})</div>
+        </div>
+        <div class="core-subcard p-2.5">
+          <div class="text-[10px] text-slate-400 uppercase">🍼 Nutrição / Sonda</div>
+          <div class="text-sm font-extrabold text-amber-300 mono">${kcalDia.toFixed(1)} kcal/d</div>
+          <div class="text-[10px] text-slate-400">Máx/tomada: <strong>${(kgCalc * t.gavMax).toFixed(2)} mL</strong></div>
+        </div>
+        <div class="core-subcard p-2.5 border border-rose-800/40">
+          <div class="text-[10px] text-rose-300 font-bold uppercase">🩸 Coleta Sangue</div>
+          <div class="text-sm font-extrabold text-rose-400 mono">Máx: ${(kgCalc * 10).toFixed(2)} mL</div>
+          <div class="text-[10px] text-slate-300">Debilitado (0,5%): <strong>${(kgCalc * 5).toFixed(2)} mL</strong></div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Corrigir rótulo "mg/kg" para "UI/kg" no card do Pentabiótico
+  const listaPresc = document.getElementById("lista-prescricao");
+  if (listaPresc && listaPresc.innerHTML.includes("Pentabiótico")) {
+    listaPresc.innerHTML = listaPresc.innerHTML
+      .replace(/(\d{4,6})\s*mg\/kg/g, "$1 UI/kg")
+      .replace(/Frasco:\s*<strong>(\d{5,6})\s*mg\/mL<\/strong>/g, "Frasco: <strong>$1 UI/mL</strong>");
+  }
+};
+
+// 2. Conversor de Unidades Internacionais (UI <-> mg / mcg)
+function converterUI() {
+  const box = document.getElementById("ui-resultado");
+  if (!box) return;
+  const sub = document.getElementById("ui-substancia").value;
+  const dir = document.getElementById("ui-direcao").value;
+  const val = parseFloat(document.getElementById("ui-valor").value) || 0;
+
+  const fatores = {
+    insulina:     { nome: "Insulina Regular / NPH / Glargina", mgPorUI: 0.0347, nota: "Na seringa de insulina padrão (U-100 = 100 UI/mL): cada 10 UI equivale a 0,10 mL (100 UI = 1,00 mL)." },
+    vit_a:        { nome: "Vitamina A (Retinol)", mgPorUI: 0.0003, nota: "1 UI = 0,3 µg de retinol (3.333 UI = 1 mg)." },
+    vit_d:        { nome: "Vitamina D3 (Colecalciferol)", mgPorUI: 0.000025, nota: "1 UI = 0,025 µg de colecalciferol (40.000 UI = 1 mg)." },
+    vit_e:        { nome: "Vitamina E (d-alfa-tocoferol)", mgPorUI: 0.67, nota: "1 UI = 0,67 mg de alfa-tocoferol natural (ou 0,45 mg na forma sintética dl-alfa)." },
+    penicilina_g: { nome: "Benzilpenicilina G (Potássica / Procaína)", mgPorUI: 1 / 1600, nota: "Padrão internacional: 1.600 UI = 1 mg (1.200.000 UI = 750 mg de penicilina base)." },
+    heparina:     { nome: "Heparina Sódica", mgPorUI: 0.01, nota: "Aproximação clínica padrão: 100 UI ≈ 1 mg (5.000 UI/mL ≈ 50 mg/mL)." },
+    ocitocina:    { nome: "Ocitocina Injetável", mgPorUI: 0.00168, nota: "1 UI ≈ 1,68 µg de peptídeo puro (frasco comercial padrão: 10 UI/mL)." }
+  };
+
+  const f = fatores[sub] || fatores.insulina;
+  if (dir === "ui_para_massa") {
+    const mg = val * f.mgPorUI;
+    const mcg = mg * 1000;
+    box.innerHTML = `<div class="font-bold text-amber-300">${val.toLocaleString("pt-BR")} UI de ${f.nome} equivale a:</div>
+      <div class="text-base font-extrabold text-emerald-400 mono mt-0.5">${mg >= 1 ? mg.toFixed(3) + " mg" : mcg.toFixed(2) + " µg (mcg)"} <span class="text-xs text-slate-400">(${mg.toFixed(4)} mg)</span></div>
+      <div class="text-[11px] text-slate-400 mt-1">${f.nota}</div>`;
+  } else {
+    const ui = val / f.mgPorUI;
+    box.innerHTML = `<div class="font-bold text-amber-300">${val} mg de ${f.nome} equivale a:</div>
+      <div class="text-base font-extrabold text-emerald-400 mono mt-0.5">${ui.toLocaleString("pt-BR", {maximumFractionDigits: 1})} UI</div>
+      <div class="text-[11px] text-slate-400 mt-1">${f.nota}</div>`;
+  }
+}
+
+setTimeout(() => { converterUI(); recalcularProntuario(); renderBularioCompleto(); }, 150);
+// ============================================================================
+// PATCH DE CORREÇÃO: SALVAMENTO COMPLETO DE SINAIS VITAIS & EXAMES LAB
+// ============================================================================
+
+salvarPacienteAtual = function() {
+  const { idx: tIdx, subIdx, t } = getTaxonAtual();
+  const nome = document.getElementById("p-nome").value.trim() || `${t.nome.split(' ')[1]} (${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})})`;
+  const dataHora = new Date().toLocaleString("pt-BR");
+
+  let pac = pacientesSalvos.find(p => p.id === pacienteAtualId || p.nome.toLowerCase() === nome.toLowerCase());
+  if (!pac) {
+    pac = { id: "pac_" + Date.now(), nome, historico: [] };
+    pacientesSalvos.unshift(pac);
+    pacienteAtualId = pac.id;
+  }
+
+  pac.nome = nome;
+  pac.tIdx = tIdx;
+  pac.subIdx = subIdx;
+  pac.peso = document.getElementById("g-peso").value;
+  pac.unid = unidPeso;
+  pac.pesoMagro = pesoMagroManual;
+
+  // Dados cadastrais e clínicos
+  pac.raca    = document.getElementById("p-raca")?.value || "";
+  pac.sexo    = document.getElementById("p-sexo")?.value || "Macho, Fértil";
+  pac.idade   = document.getElementById("p-idade")?.value || "";
+  pac.tutor   = document.getElementById("p-tutor")?.value || "";
+  pac.contato = document.getElementById("p-contato")?.value || "";
+  pac.status  = document.getElementById("p-status")?.value || "Internado";
+  pac.anam    = document.getElementById("p-anam")?.value || "";
+  pac.exFis   = document.getElementById("p-exame-fisico")?.value || "";
+  pac.comp    = document.getElementById("p-complementares")?.value || "";
+  pac.diag    = document.getElementById("p-diagnostico")?.value || "";
+  pac.sinais  = Array.from(sinaisAtivos);
+
+  // Sinais Vitais & Exames Laboratoriais (Corrigido!)
+  pac.temp    = document.getElementById("p-temp")?.value || "";
+  pac.des     = document.getElementById("p-des")?.value || "0";
+  pac.ecc     = document.getElementById("p-ecc")?.value || "0";
+  pac.fc      = document.getElementById("p-fc")?.value || "";
+  pac.fr      = document.getElementById("p-fr")?.value || "";
+  pac.mucosas = document.getElementById("p-mucosas")?.value || "";
+  pac.tpc     = document.getElementById("p-tpc")?.value || "";
+  pac.ht      = document.getElementById("p-ht")?.value || "";
+  pac.ppt     = document.getElementById("p-ppt")?.value || "";
+  pac.glic    = document.getElementById("p-glic")?.value || "";
+  pac.renal   = document.getElementById("p-renal")?.value || "";
+  pac.hep     = document.getElementById("p-hep")?.value || "";
+
+  const labResumo = [
+    pac.ht ? `Ht ${pac.ht}%` : "",
+    pac.ppt ? `PPT ${pac.ppt}` : "",
+    pac.glic ? `Glic ${pac.glic}` : "",
+    pac.renal ? `Renal ${pac.renal}` : "",
+    pac.hep ? `Hep ${pac.hep}` : ""
+  ].filter(Boolean).join(" | ");
+
+  pac.historico.unshift({
+    data: dataHora,
+    tipo: "🩺 Atendimento / Evolução",
+    resumo: `Peso: ${pac.peso} ${pac.unid} | T: ${pac.temp}°C | Suspeita: ${pac.diag || 'Em investigação'}${labResumo ? ' | Lab: ' + labResumo : ''}`
+  });
+
+  localStorage.setItem(KEY_PACIENTES, JSON.stringify(pacientesSalvos));
+  atualizarListaPacientesSalvos();
+  renderTimelinePaciente(pac);
+  if (typeof sincronizarParaNuvemGoogle === "function") sincronizarParaNuvemGoogle();
+  alert(`✅ Prontuário completo de "${nome}" salvo na Linha do Tempo!`);
+};
+
+carregarPacienteSalvo = function(id) {
+  const pac = pacientesSalvos.find(p => p.id === id);
+  if (!pac) return;
+  pacienteAtualId = pac.id;
+  document.getElementById("g-tax").value = String(pac.tIdx || 0);
+  trocarGrupoTaxonomico();
+  document.getElementById("g-subesp").value = String(pac.subIdx || 0);
+  unidPeso = pac.unid || "kg";
+  pesoMagroManual = pac.pesoMagro || 0;
+  document.getElementById("g-peso").value = pac.peso || 1.0;
+  atualizarBotoesUnidadeUI();
+
+  const mapa = {
+    "p-nome": pac.nome, "p-raca": pac.raca, "p-sexo": pac.sexo || "Macho, Fértil",
+    "p-idade": pac.idade, "p-tutor": pac.tutor, "p-contato": pac.contato,
+    "p-status": pac.status || "Internado", "p-anam": pac.anam, "p-exame-fisico": pac.exFis,
+    "p-complementares": pac.comp, "p-diagnostico": pac.diag,
+    "p-temp": pac.temp, "p-des": pac.des, "p-ecc": pac.ecc,
+    "p-fc": pac.fc, "p-fr": pac.fr, "p-mucosas": pac.mucosas, "p-tpc": pac.tpc,
+    "p-ht": pac.ht, "p-ppt": pac.ppt, "p-glic": pac.glic, "p-renal": pac.renal, "p-hep": pac.hep
+  };
+  Object.keys(mapa).forEach(k => {
+    const el = document.getElementById(k);
+    if (el && mapa[k] !== undefined && mapa[k] !== "") el.value = mapa[k];
+  });
+
+  sinaisAtivos = new Set(pac.sinais || []);
+  atualizarPesoGlobal();
+  renderTimelinePaciente(pac);
+};
+
+novoPacienteLimpo = function() {
+  pacienteAtualId = null;
+  pesoMagroManual = 0;
+  ["p-nome", "p-raca", "p-idade", "p-tutor", "p-contato", "p-anam", "p-exame-fisico", "p-complementares", "p-diagnostico", "p-fc", "p-fr", "p-mucosas", "p-tpc", "p-ht", "p-ppt", "p-glic", "p-renal", "p-hep"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  sinaisAtivos.clear();
+  itensReceitaAtual = [];
+  atualizarListaPacientesSalvos();
+  atualizarPesoGlobal();
+  document.getElementById("timeline-paciente").innerHTML = "Novo atendimento iniciado.";
+};
+
+copiarProntuarioCompleto = function() {
+  const { t, sub } = getTaxonAtual();
+  const kg = getPesoEfetivoKg();
+  const ref = (typeof LAB_REF_DB !== "undefined" && LAB_REF_DB[t.id]) ? LAB_REF_DB[t.id] : LAB_REF_DB.Cao;
+  const txt = `📋 PRONTUÁRIO CLÍNICO — VETCORE
+Paciente: ${document.getElementById("p-nome").value || "S/N"} | Espécie: ${t.nome} (${sub.nome})
+Peso: ${formatarPesoExibicao(kg)} | Sexo: ${document.getElementById("p-sexo").value} | Idade: ${document.getElementById("p-idade").value}
+Tutor/Origem: ${document.getElementById("p-tutor").value} (${document.getElementById("p-contato").value})
+----------------------------------------
+ANAMNESE: ${document.getElementById("p-anam").value}
+EXAME FÍSICO: Temp ${document.getElementById("p-temp").value}°C | Desid. ${document.getElementById("p-des").value}% | FC ${document.getElementById("p-fc").value} | FR ${document.getElementById("p-fr").value} | Mucosas ${document.getElementById("p-mucosas").value} | TPC ${document.getElementById("p-tpc").value} | ${document.getElementById("p-exame-fisico").value}
+EXAMES LAB: Ht ${document.getElementById("p-ht").value || '-'}% | PPT ${document.getElementById("p-ppt").value || '-'} g/dL | Glic ${document.getElementById("p-glic").value || '-'} mg/dL | ${ref.renalNome}: ${document.getElementById("p-renal").value || '-'} | ${ref.hepNome}: ${document.getElementById("p-hep").value || '-'}
+COMPLEMENTARES: ${document.getElementById("p-complementares").value}
+DIAGNÓSTICO / SUSPEITA: ${document.getElementById("p-diagnostico").value}`;
+  navigator.clipboard.writeText(txt);
+  alert("✅ Ficha clínica completa copiada!");
+};
+// ============================================================================
+// AUTENTICAÇÃO EXCLUSIVA POR E-MAIL/SENHA & SINCRONIZAÇÃO COMPLETA (WEB + APK)
+// ============================================================================
+
+function mostrarErroAuth(msg) {
+  const el = document.getElementById("auth-erro");
+  if (!el) return;
+  if (!msg) { el.classList.add("hidden"); el.textContent = ""; return; }
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+function traduzirErroFirebase(code, fallback) {
+  const mapa = {
+    "auth/invalid-email": "E-mail inválido.",
+    "auth/user-not-found": "Conta não encontrada. Clique em 'Criar Conta'.",
+    "auth/wrong-password": "Senha incorreta.",
+    "auth/invalid-credential": "E-mail ou senha incorretos.",
+    "auth/email-already-in-use": "Este e-mail já está cadastrado. Clique em 'Entrar' ou use 'Esqueci minha senha'.",
+    "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
+    "auth/network-request-failed": "Sem conexão com a internet."
+  };
+  return mapa[code] || fallback || "Erro ao autenticar.";
+}
+
+atualizarUIContaGoogle = function(user) {
+  const vDeslog = document.getElementById("view-login-deslogado");
+  const vLogado = document.getElementById("view-login-logado");
+  const lblTopo = document.getElementById("label-btn-conta");
+  if (!vDeslog || !vLogado) return;
+
+  if (user) {
+    vDeslog.classList.add("hidden");
+    vLogado.classList.remove("hidden");
+    const nomeBase = user.displayName || (user.email ? user.email.split("@")[0] : "Conectado");
+    if (lblTopo) lblTopo.textContent = `🟢 ${nomeBase.split(" ")[0]}`;
+    document.getElementById("usr-nome").textContent  = nomeBase;
+    document.getElementById("usr-email").textContent = user.email || "";
+    document.getElementById("usr-foto").src = "icon.png";
+    mostrarErroAuth("");
+  } else {
+    vDeslog.classList.remove("hidden");
+    vLogado.classList.add("hidden");
+    if (lblTopo) lblTopo.textContent = "👤 Login";
+  }
+};
+
+async function entrarComEmailSenha() {
+  const email = (document.getElementById("auth-email")?.value || "").trim();
+  const senha = document.getElementById("auth-senha")?.value || "";
+  if (!email || !senha) return mostrarErroAuth("Preencha e-mail e senha.");
+  if (typeof firebase === "undefined" || !firebase.apps?.length) return mostrarErroAuth("Aguarde a conexão com o servidor e tente novamente.");
+
+  mostrarErroAuth("");
+  try {
+    await firebase.auth().signInWithEmailAndPassword(email, senha);
+    document.getElementById("modal-admin")?.classList.add("hidden");
+  } catch (err) {
+    mostrarErroAuth(traduzirErroFirebase(err.code, err.message));
+  }
+}
+
+async function criarContaEmailSenha() {
+  const email = (document.getElementById("auth-email")?.value || "").trim();
+  const senha = document.getElementById("auth-senha")?.value || "";
+  if (!email || senha.length < 6) return mostrarErroAuth("Informe um e-mail válido e senha com no mínimo 6 caracteres.");
+  if (typeof firebase === "undefined" || !firebase.apps?.length) return mostrarErroAuth("Aguarde a conexão com o servidor e tente novamente.");
+
+  mostrarErroAuth("");
+  try {
+    const cred = await firebase.auth().createUserWithEmailAndPassword(email, senha);
+    const nomeEmit = document.getElementById("emit-nome")?.value?.trim();
+    if (nomeEmit && cred.user) await cred.user.updateProfile({ displayName: nomeEmit });
+    document.getElementById("modal-admin")?.classList.add("hidden");
+  } catch (err) {
+    mostrarErroAuth(traduzirErroFirebase(err.code, err.message));
+  }
+}
+
+async function recuperarSenhaEmail() {
+  const email = (document.getElementById("auth-email")?.value || "").trim();
+  if (!email) return mostrarErroAuth("Digite seu e-mail no campo acima para receber o link de redefinição.");
+  if (typeof firebase === "undefined" || !firebase.apps?.length) return mostrarErroAuth("Aguarde a conexão com o servidor.");
+
+  try {
+    await firebase.auth().sendPasswordResetEmail(email);
+    mostrarErroAuth("");
+    alert("📧 Link de redefinição de senha enviado para " + email);
+  } catch (err) {
+    mostrarErroAuth(traduzirErroFirebase(err.code, err.message));
+  }
+}
+
+logoutContaGoogle = async function() {
+  if (typeof firebase !== "undefined" && firebase.apps?.length) {
+    await firebase.auth().signOut();
+  }
+  localStorage.removeItem("vetcore_google_session");
+  atualizarUIContaGoogle(null);
+};
+
+// Restaura pacientes, emitente (CRMV) e achados customizados ao logar em outro dispositivo
+baixarDadosDaNuvemGoogle = async function(uid) {
+  if (!firestoreDb) return;
+  try {
+    const doc = await firestoreDb.collection("vetcore_usuarios").doc(uid).get();
+    if (!doc.exists) return;
+    const d = doc.data();
+
+    if (Array.isArray(d.pacientes)) {
+      pacientesSalvos = d.pacientes;
+      localStorage.setItem(KEY_PACIENTES, JSON.stringify(pacientesSalvos));
+      atualizarListaPacientesSalvos();
+    }
+    if (d.emitente && typeof d.emitente === "object") {
+      localStorage.setItem(KEY_EMITENTE, JSON.stringify(d.emitente));
+      if (d.emitente.nome && document.getElementById("emit-nome")) document.getElementById("emit-nome").value = d.emitente.nome;
+      if (d.emitente.crmv && document.getElementById("emit-crmv")) document.getElementById("emit-crmv").value = d.emitente.crmv;
+      if (d.emitente.end  && document.getElementById("emit-end"))  document.getElementById("emit-end").value  = d.emitente.end;
+      atualizarFolhaReceita();
+    }
+    if (d.sinaisCustom && typeof d.sinaisCustom === "object") {
+      localStorage.setItem(KEY_SINAIS_USR, JSON.stringify(d.sinaisCustom));
+      Object.assign(SINAIS_DB, d.sinaisCustom);
+      recalcularProntuario();
+    }
+  } catch (e) {}
+};

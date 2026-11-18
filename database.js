@@ -1479,3 +1479,96 @@ FARMACOS_DB.push(
     }
   }
 );
+// ============================================================================
+// EXPANSÃO TAXONÔMICA (PROCIONÍDEOS) & BULÁRIO (ESCOPOLAMINA + PENTABIÓTICO)
+// ============================================================================
+
+// 1. Adicionar Grupo Taxonômico Exclusivo: Procionídeos (Procyonidae)
+TAXONS_DB.splice(18, 0, {
+  id: "Procionideos", grupo: "Carnívoros — Procyonidae", nome: "🦝 Procionídeos (Quati, Mão-pelada e Jupará)",
+  tMin: 37.5, tBasalMin: 38.0, tMax: 39.2, fluidoManut: 50, bolusChoque: 12, fatorK: 70, gavMax: 25,
+  tuboSangue: "Tubo EDTA + Tampa Vermelha/Amarela (Veia Cefálica, Safena Lateral ou Jugular)",
+  vias: "IV (cefálica, safena lateral, jugular), IM (quadríceps/epaxial), SC (interescapular), VO",
+  proibido: "⛔ Proibido Corticoides no TCE! Evitar AINEs (Meloxicam/Carprofeno) antes da reidratação completa ou em suspeita de hemorragia GI/insuficiência renal. Cuidado com raiva e Baylisascaris procyonis (zoonose neurológica grave!).",
+  regraOuro: "Procionídeos possuem metabolismo rápido de anestésicos dissociativos e pele cervical espessa. Excelentes escaladores com garras afiadas e mordida potente: conter com puçá, cambão ou caixa de contenção para aplicação IM antes do exame físico.",
+  subespecies: [
+    { nome: "Quati-de-cauda-anelada (Nasua nasua — 3.5 a 6.5kg)", peso: 4.5, unid: "kg", alerta: "Animais sociais; machos adultos solitários frequentemente chegam com feridas profundas por briga intraespecífica (usar Amoxi+Clav ou Clindamicina + analgesia)." },
+    { nome: "Mão-pelada / Guaxinim-sul-americano (Procyon cancrivorus — 5 a 9kg)", peso: 6.5, unid: "kg", alerta: "Hábito semiaquático; investigar leptospirose, trauma por atropelamento e parasitoses gastrintestinais." },
+    { nome: "Jupará / Macaco-da-noite-verdadeiro (Potos flavus — 2.0 a 3.5kg)", peso: 2.6, unid: "kg", alerta: "Procionídeo estritamente arborícola e noturno de cauda preênsil; sensível a hipotermia durante sedação." }
+  ],
+  sedacao: [
+    { nome: "Contenção Química Padrão (Exame / Curativos / Coleta)", drogas: [["Cetamina", 8.0], ["Midazolam", 0.4], ["Butorfanol", 0.2]], via: "IM (quadríceps ou glúteo)", obs: "West 3ª ed. & Cubas 2ª ed.: associação equilibrada com ótimo relaxamento." },
+    { nome: "Sedação Analgésica Moderada (Debilitados / TCE)", drogas: [["Midazolam", 0.4], ["Metadona", 0.2]], via: "IM ou IV", obs: "Segura em traumatismos cranianos." }
+  ],
+  eutanasia: {
+    etapa1: ["Cetamina (12 mg/kg) + Midazolam (0.5 mg/kg) IM", 12, 100, 0.5, 5],
+    etapa2: ["Propofol (8 mg/kg IV na cefálica ou safena) até apneia e arreflexia corneal", 8, 10],
+    etapa3: ["KCl 19,1% (1 mL/kg IV) EXCLUSIVAMENTE após plano anestésico profundo confirmado!", 1.0]
+  }
+});
+
+LAB_REF_DB.Procionideos = {
+  ht: [35, 48], ppt: [5.5, 7.6], glic: [75, 145],
+  renalNome: "Creatinina (mg/dL)", renal: [0.6, 1.5],
+  hepNome: "ALT (U/L)", hep: [20, 110],
+  nota: "Procyonidae (Fowler / Cubas): referências hematológicas próximas aos canídeos; investigar hemoparasitas e função renal em politraumatizados."
+};
+
+// Sincronizar o vetor de doses dos fármacos existentes para incluir o novo índice 18 (Procionideos)
+FARMACOS_DB.forEach(f => {
+  if (f.dosesPadrao && f.dosesPadrao.length === 20) {
+    const doseCarnivoro = f.dosesPadrao[17];
+    f.dosesPadrao.splice(18, 0, doseCarnivoro);
+  }
+});
+
+// 2. Adicionar Escopolamina (Butilbrometo de Escopolamina) e Pentabiótico Veterinário ao Bulário
+FARMACOS_DB.push(
+  {
+    id: "Escopolamina", nome: "Butilbrometo de Escopolamina (Hioscina)", comercial: "Buscopan® Simples (20 mg/mL), Buscofin® (4 mg/mL)",
+    apres: "Ampola Humana 20 mg/mL | Vet 4 mg/mL | Gotas 10 mg/mL", conc: 20,
+    frascos: [
+      { label: "Ampola Humana 20 mg/mL (Buscopan®)", conc: 20 },
+      { label: "Injetável Veterinário 4 mg/mL (Buscofin®)", conc: 4 },
+      { label: "Gotas Orais 10 mg/mL (20 gts/mL)", conc: 10 }
+    ],
+    compMg: [10], gotasMl: 20, usoReceita: "uso humano",
+    dosesPadrao: [0.5, 0.5, 0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0],
+    resumoBulario: "Anticolinérgico antiespasmódico de ação seletiva sobre a musculatura lisa gastrintestinal, biliar e geniturinária (reduz cólicas, espasmos uretrais e hipermotilidade dolorosa sem atravessar fortemente a barreira hematoencefálica). QUANDO USAR: Cólicas abdominais agudas, espasmo uretral/vesical (DTUIF pós-desobstrução), gastroenterites espásticas e dor visceral associada à Dipirona. CONTRAINDICAÇÕES: Íleo paralítico / estase gastrintestinal atônica (não usar em coelhos com estase por atonia cecal!), glaucoma, taquiarritmias graves e megacólon.",
+    faixasPorGrupo: {
+      Aves: { opcoes: [0], via: "⚠️ Evitar uso rotineiro em Aves (risco de estase ingluvial e espessamento de secreções respiratórias)", badge: "⚠️ Evitar em Aves", status: "alerta",
+        fontes: [["Carpenter's Exotic Animal Formulary — 6ª Ed.", "Anticholinergics cause crop stasis and inspissated airway secretions in avian patients.", "📖 Conferido na Fonte"]]
+      },
+      Padrao: { opcoes: [0.3, 0.5, 1.0], via: "IV lento, IM, SC ou VO a cada 8 a 12h (Cães/Gatos/Mamíferos: 0,3 a 0,5 mg/kg; Equinos cólica: 0,3 mg/kg IV)", badge: "🟢 Antiespasmódico Visceral / Cólica / Espasmo Uretral", status: "seguro",
+        fontes: [
+          ["Plumb's Veterinary Drug Handbook — 10ª Ed. & Spinosa (6ª Ed., p. 118)", "Hyoscine butylbromide: Dogs & Cats 0.3–0.5 mg/kg IV, IM, SC q8–12h for visceral/GI/urinary smooth muscle spasm.", "📖 Conferido na Fonte"],
+          ["Equine Medicine Secrets (Savage) & Casos de Rotina (Crivellenti)", "0.3 mg/kg IV for spasmodic colic and visceral analgesia.", "📖 Conferido na Fonte"]
+        ]
+      }
+    }
+  },
+  {
+    id: "Pentabiotico", nome: "Pentabiótico Veterinário® (Associação Penicilinas + Estreptomicina)", comercial: "Pentabiótico Veterinário Pequeno Porte (1.200.000 UI) / Reforçado (6.000.000 UI)",
+    apres: "Frasco-ampola Pó + Diluente (Base: Benzilpenicilina Total em UI/kg)", conc: 240000,
+    frascos: [
+      { label: "Pequeno Porte (1.200.000 UI reconstituído em 5 mL = 240.000 UI/mL)", conc: 240000 },
+      { label: "Reforçado (6.000.000 UI reconstituído em 15 mL = 400.000 UI/mL)", conc: 400000 }
+    ],
+    compMg: [], gotasMl: 20, usoReceita: "uso veterinário",
+    dosesPadrao: [30000, 30000, 30000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30000, 30000, 30000, 30000, 30000, 0, 0],
+    resumoBulario: "Associação bactericida injetável de Benzilpenicilina Benzatina + Procaína + Potássica + Diidroestreptomicina + Estreptomicina (ação imediata e depósito de 48–72h). QUANDO USAR: Infecções bacterianas sensíveis em Grandes Animais (garrotilho, linfangite ulcerativa, pneumonias, metrites, pododermatites) e, na rotina de campo/resgate de mamíferos adultos hígidos, quando o tutor ou recinto não consegue medicar diariamente (dose única IM profunda a cada 48–72h). 🚨 RESTRIÇÕES CRÍTICAS: 1) NUNCA aplicar por via Intravenosa (a Penicilina Procaína IV causa parada cardiorrespiratória fulminante!); 2) ⛔ 100% LETAL EM COELHOS, COBAIAS, CHINCHILAS, HAMSTERS E AVES PEQUENAS (a Estreptomicina + Procaína causa bloqueio neuromuscular, ototoxicidade/nefrotoxicidade fatal e enterotoxemia!).",
+    faixasPorGrupo: {
+      Aves: { opcoes: [0], via: "⛔ CONTRAINDICADO EM AVES (Toxicidade aguda da Estreptomicina e Procaína!)", badge: "⛔ PROIBIDO EM AVES", status: "proibido",
+        fontes: [["Carpenter's Exotic Animal Formulary — 6ª Ed., p. 254", "Procaine penicillin + streptomycin combinations cause acute fatal neuromuscular blockade and toxicity in birds.", "📖 Conferido na Fonte"]]
+      },
+      ProibidoCeco: { opcoes: [0], via: "⛔ 100% LETAL EM COELHOS, COBAIAS E CHINCHILAS!", badge: "⛔ LETAL (Enterotoxemia + Bloqueio Neuromuscular)", status: "proibido",
+        fontes: [["Carpenter 6ª Ed., p. 475 & BSAVA Manual of Rodents", "Procaine penicillin and streptomycin are lethal in rabbits, guinea pigs, chinchillas, and hamsters.", "📖 Conferido na Fonte"]]
+      },
+      Padrao: { opcoes: [20000, 30000, 40000], via: "EXCLUSIVAMENTE IM PROFUNDA (Aspirar antes! PROIBIDO IV!) a cada 48 a 72h (Dose expressa em UI/kg)", badge: "⚠️ IM PROFUNDA APENAS (Proibido IV, Aves e Lagomorfos/Roedores!)", status: "alerta",
+        fontes: [
+          ["Spinosa — Farmacologia Aplicada à Medicina Veterinária (6ª Ed., p. 466) & Bula Oficial Zoetis", "Dose: 20.000 a 40.000 UI/kg de benzilpenicilinas totais via IM profunda a cada 48–72h. Contraindicado IV e em nefropatas.", "📖 Conferido na Fonte"]
+        ]
+      }
+    }
+  }
+);

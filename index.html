@@ -29,46 +29,51 @@
   }
 </style>
 </head>
-<body class="pb-20 pt-36 md:pt-28">
+<body class="pb-24 pt-44 md:pt-32">
 
-<!-- CABEÇALHO GLOBAL REATIVO VETCORE -->
-<header class="fixed top-0 inset-x-0 z-40 glass-nav border-b border-slate-800/80 px-3 sm:px-5 py-2">
+<!-- CABEÇALHO GLOBAL CLEAN & RESPONSIVO (ZERO CORTES EM CELULAR) -->
+<header class="fixed top-0 inset-x-0 z-40 glass-nav border-b border-slate-800/80 px-3 sm:px-5 py-2.5">
   <div class="max-w-6xl mx-auto flex flex-col gap-2">
     
-    <!-- Linha 1: Logo Estilizada + Seletor de Pacientes Salvos + Login Compacto (Sem cortar no celular) -->
-    <div class="flex items-center justify-between gap-1.5">
+    <!-- Linha 1: Marca VetCore + Ações Rápidas (Sem aperto lateral) -->
+    <div class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-2 shrink-0">
-        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl overflow-hidden bg-[#0B0F17] flex items-center justify-center shadow-md border border-emerald-500/20 shrink-0">
+        <div class="w-8 h-8 rounded-xl overflow-hidden bg-[#0B0F17] flex items-center justify-center shadow border border-emerald-500/20 shrink-0">
           <img src="icon.png" alt="VC" class="w-full h-full object-cover scale-[1.32]" onerror="this.outerHTML='<span class=\'font-black text-xs text-emerald-400\'>VC</span>'">
         </div>
-        <div class="text-sm sm:text-lg tracking-tight leading-none">
+        <div class="text-base sm:text-lg tracking-tight leading-none">
           <span class="font-normal text-slate-200">Vet</span><span class="font-extrabold text-emerald-400">Core</span>
         </div>
       </div>
 
-      <div class="flex items-center gap-1 min-w-0">
-        <select id="sel-pacientes-salvos" onchange="carregarPacienteSalvo(this.value)" class="bg-slate-900 border border-slate-700 text-[11px] text-slate-200 rounded-lg px-1.5 py-1.5 outline-none focus:border-emerald-500 max-w-[105px] sm:max-w-[165px] truncate">
-          <option value="">🩺 Pacientes (0)</option>
-        </select>
-        <button onclick="salvarPacienteAtual()" class="px-2 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold shrink-0" title="Salvar Prontuário">💾 <span class="hidden sm:inline">Salvar</span></button>
-        <button onclick="novoPacienteLimpo()" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-bold shrink-0" title="Novo Paciente">➕</button>
-        <button onclick="abrirModalGuia('admin')" class="px-2 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-semibold shrink-0"><span id="label-btn-conta">👤 Login</span></button>
+      <div class="flex items-center gap-1.5">
+        <button onclick="salvarPacienteAtual()" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold">💾 Salvar</button>
+        <button onclick="novoPacienteLimpo()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold" title="Novo Atendimento">➕ Novo</button>
+        <button onclick="abrirModalGuia('admin')" class="px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold"><span id="label-btn-conta">👤 Login</span></button>
       </div>
     </div>
 
-    <!-- Linha 2: Seleção Taxonômica em 2 Níveis (Grupo -> Espécie Individual) + Peso Reativo [g | kg] -->
+    <!-- Linha 2: Seletor de Pacientes Salvos em Largura Livre -->
+    <div>
+      <select id="sel-pacientes-salvos" onchange="carregarPacienteSalvo(this.value)" class="w-full bg-slate-900/90 border border-slate-800 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500">
+        <option value="">🩺 Prontuários Salvos (0)</option>
+      </select>
+    </div>
+
+    <!-- Linha 3: Seleção Taxonômica Legível + Peso Reativo [g | kg] -->
     <div class="grid grid-cols-12 gap-1.5 sm:gap-2 items-center">
-      <div class="col-span-4 sm:col-span-5">
-        <select id="g-tax" onchange="trocarGrupoTaxonomico()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-white outline-none focus:border-emerald-500"></select>
+      <div class="col-span-6 sm:col-span-5">
+        <select id="g-tax" onchange="trocarGrupoTaxonomico()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs font-semibold text-white outline-none focus:border-emerald-500"></select>
       </div>
-      <div class="col-span-4 sm:col-span-4">
-        <select id="g-subesp" onchange="trocarSubespecie()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-medium text-emerald-300 outline-none focus:border-emerald-500"></select>
+      <div class="col-span-6 sm:col-span-4">
+        <select id="g-subesp" onchange="trocarSubespecie()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs font-medium text-emerald-300 outline-none focus:border-emerald-500"></select>
       </div>
-      <div class="col-span-4 sm:col-span-3 flex items-center bg-slate-900 border border-slate-700 rounded-xl p-0.5 focus-within:border-emerald-500">
-        <input id="g-peso" type="number" step="any" value="4.0" oninput="atualizarPesoGlobal()" class="w-full bg-transparent px-2 py-1 text-xs sm:text-sm font-bold text-white outline-none mono" placeholder="Peso">
+      <div class="col-span-12 sm:col-span-3 flex items-center bg-slate-900 border border-slate-700 rounded-xl p-0.5 focus-within:border-emerald-500">
+        <span class="text-[11px] text-slate-400 pl-2.5 pr-1 font-semibold">Peso:</span>
+        <input id="g-peso" type="number" step="any" value="4.0" oninput="atualizarPesoGlobal()" class="w-full bg-transparent px-1.5 py-1 text-xs sm:text-sm font-bold text-white outline-none mono" placeholder="0.0">
         <div class="flex bg-slate-950 rounded-lg p-0.5 border border-slate-800 shrink-0">
-          <button id="btn-u-g" type="button" onclick="setUnidade('g')" class="px-2 py-1 rounded-md text-[11px] font-bold text-slate-400">g</button>
-          <button id="btn-u-kg" type="button" onclick="setUnidade('kg')" class="px-2 py-1 rounded-md text-[11px] font-bold bg-emerald-600 text-white">kg</button>
+          <button id="btn-u-g" type="button" onclick="setUnidade('g')" class="px-2.5 py-1 rounded-md text-[11px] font-bold text-slate-400">g</button>
+          <button id="btn-u-kg" type="button" onclick="setUnidade('kg')" class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-600 text-white">kg</button>
         </div>
       </div>
     </div>
@@ -415,7 +420,40 @@
         </div>
         <div id="cr-out"></div>
         <div id="box-bombas-combinadas" class="pt-3 border-t border-slate-800 space-y-2.5"></div>
-      </div>
+        
+        <!-- CONVERSOR DE UNIDADES INTERNACIONAIS (UI <-> MG / MCG / ML) -->
+        <div class="pt-3 border-t border-slate-800 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-amber-400">🔬 Conversor de Unidades Internacionais (UI &harr; mg / µg / mL)</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase">Substância / Padrão OMS</label>
+              <select id="ui-substancia" onchange="converterUI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white">
+                <option value="insulina">Insulina (1 UI = 0,0347 mg | U-100 = 100 UI/mL)</option>
+                <option value="vit_a">Vitamina A / Retinol (1 UI = 0,3 µg)</option>
+                <option value="vit_d">Vitamina D3 / Colecalciferol (1 UI = 0,025 µg)</option>
+                <option value="vit_e">Vitamina E / Alfa-tocoferol (1 UI = 0,67 mg)</option>
+                <option value="penicilina_g">Penicilina G Potássica/Procaína (1.600 UI = 1 mg)</option>
+                <option value="heparina">Heparina Sódica (100 UI &approx; 1 mg)</option>
+                <option value="ocitocina">Ocitocina (1 UI &approx; 1,68 µg)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase">Direção</label>
+              <select id="ui-direcao" onchange="converterUI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white">
+                <option value="ui_para_massa">Converter UI &rarr; mg / µg</option>
+                <option value="massa_para_ui">Converter mg &rarr; UI</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase">Valor a Converter</label>
+              <input id="ui-valor" type="number" step="any" value="1000" oninput="converterUI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-bold text-white mono">
+            </div>
+          </div>
+          <div id="ui-resultado" class="p-3 rounded-xl bg-slate-950 border border-amber-700/50 text-xs text-slate-200"></div>
+        </div>
+    </div>
     </div>
 
     <!-- Painel 2: Protocolos de Sedação & Contenção Química Calculados p/ o Peso Atual -->
@@ -524,35 +562,36 @@
   </div>
 </div>
 
-<!-- MODAL OFICIAL DE LOGIN COM CONTA GOOGLE (100% AUTOMÁTICO) -->
+<!-- MODAL OFICIAL DE CONTA VETCORE (E-MAIL E SENHA — WEB & APK) -->
 <div id="modal-admin" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-  <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-5 shadow-2xl text-center">
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl text-center">
     <div class="flex justify-between items-center border-b border-slate-800 pb-3">
       <span class="text-sm font-bold text-white">Conta VetCore</span>
       <button onclick="document.getElementById('modal-admin').classList.add('hidden')" class="text-xs text-slate-400 hover:text-white">✕</button>
     </div>
 
     <!-- Estado 1: Deslogado -->
-    <div id="view-login-deslogado" class="space-y-4 py-2">
-      <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-xl">☁️</div>
+    <div id="view-login-deslogado" class="space-y-3.5 py-1">
       <div class="space-y-1">
-        <h4 class="text-sm font-bold text-white">Sincronização Automática na Nuvem</h4>
-        <p class="text-xs text-slate-400 leading-relaxed">Entre com sua conta Google para manter seus prontuários, linha do tempo e receitas sincronizados automaticamente entre o celular e o computador.</p>
+        <h4 class="text-sm font-bold text-white">Sincronização na Nuvem</h4>
+        <p class="text-xs text-slate-400 leading-relaxed">Use o mesmo e-mail e senha no celular e no computador para sincronizar prontuários, receitas e dados do emitente.</p>
       </div>
-      <button type="button" onclick="loginComGoogle()" class="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs flex items-center justify-center gap-2.5 shadow transition">
-        <svg class="w-4 h-4" viewBox="0 0 24 24">
-          <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.8C6.2 7.2 8.9 5 12 5z"/>
-          <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.6l3.7 2.9c2.2-2 3.7-5 3.7-8.7z"/>
-          <path fill="#FBBC05" d="M5.3 14.8c-.2-.8-.4-1.6-.4-2.5s.2-1.7.4-2.5L1.6 7C.6 9 0 11.2 0 13.5s.6 4.5 1.6 6.5l3.7-2.9z"/>
-          <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.1-6.7-5l-3.7 2.8C3.5 20.9 7.4 24 12 24z"/>
-        </svg>
-        <span>Continuar com o Google</span>
-      </button>
+
+      <div class="space-y-2 text-left">
+        <input id="auth-email" type="email" autocomplete="email" placeholder="Seu e-mail" class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none">
+        <input id="auth-senha" type="password" autocomplete="current-password" placeholder="Sua senha (mín. 6 caracteres)" class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none">
+        <div id="auth-erro" class="hidden text-[11px] text-rose-400 font-medium px-1"></div>
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button type="button" onclick="entrarComEmailSenha()" class="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition">Entrar</button>
+          <button type="button" onclick="criarContaEmailSenha()" class="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs transition">Criar Conta</button>
+        </div>
+        <button type="button" onclick="recuperarSenhaEmail()" class="w-full text-center text-[11px] text-slate-400 hover:text-emerald-400 pt-1">Esqueci minha senha</button>
+      </div>
     </div>
 
     <!-- Estado 2: Logado -->
     <div id="view-login-logado" class="hidden space-y-4 py-2">
-      <img id="usr-foto" src="" alt="Foto" class="w-14 h-14 rounded-full mx-auto border-2 border-emerald-500">
+      <img id="usr-foto" src="icon.png" alt="VetCore" class="w-14 h-14 rounded-full mx-auto border-2 border-emerald-500 object-cover">
       <div>
         <div id="usr-nome" class="text-sm font-bold text-white"></div>
         <div id="usr-email" class="text-xs text-slate-400"></div>
