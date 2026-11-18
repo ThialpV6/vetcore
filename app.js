@@ -2364,3 +2364,594 @@ setTimeout(() => {
   calcularFGS();
   calcularCMPS();
 }, 220);
+// ============================================================================
+// FICHA MONOGRÁFICA COMPLETA DO BULÁRIO (TODOS OS TÁXONS + VISUAL CLEAN)
+// ============================================================================
+
+// 1. Correção de precisão no mapeamento de táxon (ativa alertas diretos por t.id)
+getConfigFarmacoParaTaxon = function(f, tIdx, t) {
+  const dosePadrao = f.dosesPadrao[tIdx] !== undefined ? f.dosesPadrao[tIdx] : f.dosesPadrao[0];
+  let grupoCfg = f.faixasPorGrupo.Padrao;
+
+  if (f.faixasPorGrupo[t.id]) {
+    grupoCfg = f.faixasPorGrupo[t.id];
+  } else if ((t.id === "Coelhos" || t.id === "Caviomorfos" || t.id === "Miomorfos") && dosePadrao === 0 && f.faixasPorGrupo.ProibidoCeco) {
+    grupoCfg = f.faixasPorGrupo.ProibidoCeco;
+  } else if (t.grupo.includes("Aves") && f.faixasPorGrupo.Aves) {
+    grupoCfg = f.faixasPorGrupo.Aves;
+  } else if (t.id === "Caviomorfos" && f.faixasPorGrupo.Coelhos) {
+    grupoCfg = f.faixasPorGrupo.Coelhos;
+  }
+
+  const doseAtiva = (f._doseOverride && f._doseOverride[t.id] !== undefined) ? f._doseOverride[t.id] : dosePadrao;
+  const concAtiva = f._concAtiva || f.conc;
+  return { doseAtiva, concAtiva, grupoCfg };
+};
+
+// 2. Metadados Farmacológicos (Classe, Validade, Vias, Populações Especiais e Notas por Táxon)
+const MONOGRAFIAS_EXTRA = {
+  "Meloxicam": {
+    classe: "AINE derivado do ácido enólico (Oxicam) — Inibidor preferencial COX-2",
+    validade: "28 dias a 6 meses após aberto (conforme fabricante/bula; proteger da luz)",
+    vias: [
+      ["VO", "✅", "Boa palatabilidade em suspensões; administrar após alimentação e com paciente normohidratado."],
+      ["SC", "✅", "Excelente via de rotina em cães, gatos, marsupiais e pequenos mamíferos; garantir hidratação prévia."],
+      ["IM", "✅", "Boa tolerabilidade; em quelônios (Testudines) e lagartos, aplicar exclusivamente nos membros anteriores."],
+      ["IV", "✅", "Administrar lentamente em pacientes hemodinamicamente estáveis e normotensos."]
+    ],
+    populacoes: [
+      "Pediátricos: Cautela extrema — néfrons imaturos e maior risco de lesão renal aguda.",
+      "Geriátricos: Avaliar função renal/hepática prévia e empregar a menor dose eficaz pelo menor tempo.",
+      "Nefropatas / Desidratados / Choque: Contraindicação absoluta (bloqueio de PGE2/PGI2 precipita vasoconstrição aferente e necrose tubular aguda).",
+      "Hepatopatas / Úlcera GI: Contraindicado em hepatopatia moderada a grave ou sangramento gastrintestinal ativo.",
+      "Interações Críticas: PROIBIDO associar com outros AINEs ou Corticoides (risco extremo de úlcera gástrica perfurante)."
+    ],
+    notasTaxon: {
+      Gato: "Dose de ataque 0,1 mg/kg no Dia 1, reduzindo para 0,05 mg/kg SID; contraindicado na DRC descompensada ou desidratação.",
+      Gamba: "Seguro a 0,1–0,2 mg/kg SID por no máximo 3 dias (alto risco de úlcera gástrica em uso prolongado).",
+      Coelhos: "Metabolismo hepático ultrarrápido: doses de cão (0,1–0,2 mg/kg) são subterapêuticas; usar 0,5–1,0 mg/kg q12–24h.",
+      Caviomorfos: "Depuração rápida; usar 0,5 mg/kg q12–24h com boa hidratação.",
+      Miomorfos: "Ratos/Camundongos: 1,0 mg/kg q12–24h (literatura cita até 2 mg/kg em dor aguda).",
+      Psittaciformes: "Baixa biodisponibilidade oral relativa exige 1,0 mg/kg q12h; evitar em suspeita de Bornavírus Aviário (ABV).",
+      Passeriformes: "Alta taxa metabólica obriga intervalo q12h (q24h não mantém analgesia efetiva).",
+      Cathartiformes: "ÚNICO AINE seguro em urubus e aves de rapina (Diclofenaco, Flunixin e Cetoprofeno são 100% letais!)."
+    }
+  },
+  "Amoxicilina+Clav": {
+    classe: "Beta-lactâmico (Aminopenicilina) + Inibidor de Beta-lactamase (Ácido Clavulânico)",
+    validade: "Suspensão oral reconstituída: 7 a 10 dias sob refrigeração (2–8 °C)",
+    vias: [
+      ["VO", "✅", "1ª escolha em cães, gatos, aves e ratos (Rattus). ⛔ PROIBIDO VO em Coelhos, Cobaias, Chinchilas e Ouriço-cacheiro!"],
+      ["SC", "✅", "Somente formulação injetável veterinária (ex.: Synulox® RTU); agitar vigorosamente antes de aspirar."],
+      ["IM", "⚠️", "Apenas formulação injetável específica; pode causar desconforto local."],
+      ["IV", "⚠️", "Apenas formulações hospitalares específicas para uso IV (Clavulin® IV); nunca injetar suspensão RTU IV!"]
+    ],
+    populacoes: [
+      "Pediátricos / Gestantes: Alta margem de segurança (1ª linha em filhotes onde fluoroquinolonas e tetraciclinas são contraindicadas).",
+      "Nefropatas: Excreção predominantemente renal; em azotemia severa espaçar o intervalo posológico.",
+      "Fermentadores Cecais (Coelhos/Caviomorfos): Contraindicação absoluta por via oral (enterotoxemia letal por Clostridium spiroforme)."
+    ],
+    notasTaxon: {
+      Columbiformes: "1ª escolha imediata em ataque/mordedura de gato (Pasteurella multocida): 125 mg/kg VO q12h.",
+      Miomorfos: "Seguro por via oral em Ratos (Rattus) e Camundongos (20 mg/kg BID); evitar em Hamsters!"
+    }
+  },
+  "Enrofloxacina": {
+    classe: "Fluoroquinolona de 2ª geração (Bactericida concentração-dependente)",
+    validade: "Frasco injetável: 28 dias após perfurado em temperatura ambiente; não congelar",
+    vias: [
+      ["VO", "✅", "Boa absorção; evitar administrar junto com cálcio, alumínio, ferro ou sucralfato (quelação reduz absorção)."],
+      ["SC", "⚠️", "pH extremamente alcalino: DILUIR 1:4 em NaCl 0,9% para evitar necrose e abscesso estéril no subcutâneo."],
+      ["IM", "⚠️", "Evitar aplicações repetidas em aves e pequenos mamíferos (causa mionecrose peitoral/muscular severa)."],
+      ["IV", "⚠️", "Apenas diluída e em infusão muito lenta (20–30 min); evitar IV em gatos pelo pico plasmático retinotóxico."]
+    ],
+    populacoes: [
+      "Felinos (Domésticos e Silvestres): Defeito na proteína ABCG2 da barreira hematorretiniana causa degeneração retiniana aguda e CEGUEIRA IRREVERSÍVEL (preferir Marbofloxacina).",
+      "Pediátricos / Filhotes em Crescimento: Contraindicada (lesão erosiva em cartilagem articular).",
+      "Epilépticos / TCE: Reduz o limiar convulsivo por antagonismo GABA; usar com cautela."
+    ],
+    notasTaxon: {
+      Gato: "⚠️ ALERTA MÁXIMO: Nunca ultrapassar 5 mg/kg SID; evitar em idosos/nefropatas/desidratados (preferir Marbofloxacina).",
+      CarnivorosSilv: "Em felídeos silvestres (Leopardus/Puma), aplicar a mesma restrição retiniana do gato doméstico!"
+    }
+  },
+  "Clindamicina": {
+    classe: "Lincosamida (Bacteriostática/Bactericida tempo-dependente — Gram+ e Anaeróbios)",
+    validade: "Solução oral/injetável conforme bula; manter em temperatura ambiente",
+    vias: [
+      ["VO", "✅", "Em gatos, administrar obrigatoriamente 3–5 mL de água ou alimento úmido logo após para evitar estenose esofágica."],
+      ["SC", "✅", "Boa alternativa quando a via oral não está disponível em cães/gatos."],
+      ["IM", "⚠️", "Pode causar dor local; diluir se necessário."],
+      ["IV", "⚠️", "PROIBIDO bolus rápido (risco de hipotensão e parada cardíaca); diluir em NaCl 0,9% e infundir em 20–30 min."]
+    ],
+    populacoes: [
+      "Fermentadores Cecais (Coelhos/Roedores): 100% LETAL (enterotoxemia fulminante por Clostridium).",
+      "Hepatopatas Graves: Metabolismo hepático intenso — reduzir dose ou escolher alternativa."
+    ]
+  },
+  "Dipirona": {
+    classe: "Analgésico não-opioide e antipirético (Pirazolona — ação central e espasmolítica)",
+    validade: "Ampolas: uso imediato ou até 24h refrigerada; frasco veterinário/gotas conforme bula",
+    vias: [
+      ["VO", "✅", "Preferir solução oral infantil 50 mg/mL em animais < 2 kg (gotas 500 mg/mL causam sialorreia intensa em gatos!)."],
+      ["SC", "✅", "Bem tolerada em cães e gatos; diluir 1:10 em animais < 1 kg."],
+      ["IM", "✅", "Boa absorção; usar volume reduzido em aves e microfauna."],
+      ["IV", "✅", "Administrar LENTAMENTE (bolus rápido pode induzir hipotensão transitória e vômito)."]
+    ],
+    populacoes: [
+      "Nefropatas / Ascíticos / Choque: Alternativa analgésica segura quando AINEs (Meloxicam/Carprofeno) estão contraindicados.",
+      "Felinos: Usar 12,5 a 25 mg/kg q12–24h (meia-vida mais longa em gatos); evitar gotas puras VO pelo sabor amargo."
+    ]
+  },
+  "Escopolamina": {
+    classe: "Anticolinérgico antiespasmódico (Derivado quaternário da hioscina)",
+    validade: "Ampolas: uso imediato; frasco veterinário (Buscofin®) conforme bula",
+    vias: [
+      ["IV", "✅", "Via de escolha na cólica aguda e espasmo visceral intenso (infusão lenta)."],
+      ["IM", "✅", "Boa absorção em cães, gatos e mamíferos silvestres."],
+      ["SC", "✅", "Alternativa prática na rotina ambulatorial."],
+      ["VO", "✅", "Comprimidos/gotas para manutenção domiciliar de cólicas espasmódicas."]
+    ],
+    populacoes: [
+      "Íleo Paralítico / Estase GI Atônica: CONTRAINDICADO (agrava a atonia intestinal; não usar em estase cecal de coelhos!).",
+      "Glaucoma / Taquiarritmias: Evitar pelo efeito antimuscarínico."
+    ]
+  },
+  "Pentabiotico": {
+    classe: "Associação Bactericida: Benzilpenicilinas (Benzatina + Procaína + Potássica) + Aminoglicosídeos (Estreptomicina + Diidroestreptomicina)",
+    validade: "Usar imediatamente após reconstituição (ou máx. 24h refrigerado; agitar fortemente antes de aspirar)",
+    vias: [
+      ["IM", "✅", "VIA EXCLUSIVA (IM profunda com agulha calibrosa; ASPIRAR SEMPRE antes de injetar!)."],
+      ["IV", "⛔", "ESTRITAMENTE PROIBIDO! A Penicilina Procaína IV causa êmbolo lipídico, convulsão e parada cardíaca imediata."],
+      ["SC", "⛔", "Não indicada — alto risco de abscesso, fibrose e absorção errática."],
+      ["VO", "⛔", "Inativada pelo suco gástrico e destrói microbiota."]
+    ],
+    populacoes: [
+      "Aves, Coelhos, Cobaias, Chinchilas e Hamsters: ⛔ 100% LETAL (bloqueio neuromuscular agudo pela Estreptomicina + toxicidade da Procaína + enterotoxemia).",
+      "Nefropatas / Desidratados / Geriátricos: Evitar devido à nefrotoxicidade e ototoxicidade da Estreptomicina.",
+      "Indicação Prática: Infecções bacterianas sensíveis em Grandes Animais ou animais de campo/resgate onde a administração diária é inviável (ação depósito de 48–72h)."
+    ]
+  }
+};
+
+const CLASSES_PADRAO_FARMACO = {
+  "Marbofloxacina": "Fluoroquinolona veterinária de 3ª geração (Baixo risco retiniano em felinos)",
+  "Ceftazidima": "Cefalosporina de 3ª geração antipseudomonas (1ª escolha injetável em répteis)",
+  "Doxiciclina": "Tetraciclina lipofílica de amplo espectro (Clamidiose / Micoplasmose / Hemoparasitas)",
+  "Metronidazol": "Nitroimidazol bactericida contra anaeróbios obrigatórios e antiprotozoário",
+  "Carprofeno": "AINE inibidor preferencial COX-2 (Derivado do ácido propiônico)",
+  "Robenacoxibe": "AINE Coxibe altamente seletivo para COX-2",
+  "Prednisolona": "Glicocorticoide de ação intermediária (Forma ativa preferencial em felinos)",
+  "Dexametasona": "Glicocorticoide de longa ação e alta potência anti-inflamatória",
+  "Tramadol": "Analgésico central (Agonista Mu fraco + Inibidor de recaptação de 5-HT/NA)",
+  "Gabapentina": "Análogo GABA / Modulador de canais de cálcio alfa-2-delta (Dor neuropática / Ansiolítico)",
+  "Butorfanol": "Opioide Agonista Kappa / Antagonista Mu (1ª escolha opioide em aves)",
+  "Metadona": "Opioide Agonista Mu puro + Antagonista NMDA (Dor severa / Trauma / TCE)",
+  "Midazolam": "Benzodiazepínico hidrossolúvel (Anticonvulsivante 1ª linha e Miorrelaxante)",
+  "Cetamina": "Anestésico dissociativo e Antagonista NMDA",
+  "Lidocaina 2%": "Anestésico local aminoamida de curta/média duração e antiarrítmico Classe IB",
+  "Bupivacaina 0,5%": "Anestésico local aminoamida de longa duração (4–8h)",
+  "Maropitant": "Antiemético antagonista seletivo de receptores NK-1 (Substância P)",
+  "Ondansetrona": "Antiemético antagonista seletivo de receptores 5-HT3 de serotonina",
+  "Metoclopramida": "Procinético gastrintestinal superior e antiemético antagonista D2",
+  "Omeprazol": "Inibidor da Bomba de Prótons (IBP — Gastroprotetor)",
+  "Sucralfato": "Citoprotetor de mucosa esofágica, ingluvial e gástrica",
+  "Furosemida": "Diurético de alça (Inibidor do cotransportador Na-K-2Cl)",
+  "Manitol 20%": "Diurético osmótico redutor da Pressão Intracraniana (PIC)",
+  "Vitamina K1": "Fitomenadiona — Cofator de síntese dos fatores de coagulação II, VII, IX e X",
+  "Nitenpiram": "Ectoparasiticida sistêmico neonicotinoide de ação ultrarrápida (Miíase)",
+  "Itraconazol": "Antifúngico Triazol sistêmico (Esporotricose / Aspergilose)",
+  "Alopurinol": "Inibidor da xantina oxidase (Gota úrica em répteis/aves e Leishmaniose)",
+  "Ivermectina": "Endectocida Lactona Macrocíclica (Avermectina)",
+  "Fenbendazol": "Anti-helmíntico e antiprotozoário Benzimidazol",
+  "Sulfametoxazol+Trim": "Associação bactericida sinérgica (Sulfonamida + Diaminopirimidina) e coccidiostática",
+  "Cefalexina": "Cefalosporina de 1ª geração (Piodermites estafilocócicas)"
+};
+
+let fichaFarmacoIdxAtual = 0;
+let fichaAbaAtiva = "posologia";
+let fichaFiltroStatus = "todos";
+
+function garantirContainerFichaFarmaco() {
+  let el = document.getElementById("ficha-farmaco-view");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "ficha-farmaco-view";
+    el.className = "fixed inset-0 z-50 hidden bg-[#0B0F17] overflow-y-auto";
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function fecharFichaCompletaFarmaco() {
+  const el = document.getElementById("ficha-farmaco-view");
+  if (el) el.classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
+function abrirFichaCompletaFarmaco(fIdx, abaInicial) {
+  fichaFarmacoIdxAtual = fIdx;
+  fichaAbaAtiva = abaInicial || "posologia";
+  fichaFiltroStatus = "todos";
+  fecharModal();
+  const el = garantirContainerFichaFarmaco();
+  el.classList.remove("hidden");
+  el.scrollTop = 0;
+  document.body.style.overflow = "hidden";
+  renderFichaCompletaFarmaco();
+}
+
+function mudarAbaFichaFarmaco(aba) {
+  fichaAbaAtiva = aba;
+  renderFichaCompletaFarmaco();
+}
+
+function setFiltroStatusFicha(st) {
+  fichaFiltroStatus = st;
+  renderTabelaPosologiaFicha();
+}
+
+function getMotivoBloqueioGenerico(f, t) {
+  if (f.id === "Fenbendazol" && (t.id === "Columbiformes" || t.id === "Cathartiformes")) {
+    return "⛔ PROIBIDO: Causa aplasia letal de medula óssea, leucopenia fulminante e necrose de criptas intestinais (Carpenter 6ª ed., p. 263).";
+  }
+  if (f.id === "Ivermectina" && t.id === "Testudines") {
+    return "⛔ 100% LETAL EM QUELÔNIOS: Atravessa a barreira hematoencefálica causando paralisia flácida irreversível (Carpenter 6ª ed., p. 117).";
+  }
+  if ((f.id === "Prednisolona" || f.id === "Dexametasona") && (t.id === "Coelhos" || t.id === "Caviomorfos" || t.grupo.includes("Répteis"))) {
+    return "⛔ Contraindicado: Imunossupressão severa, disbiose fatal e úlceras gastrintestinais nesta espécie.";
+  }
+  if (f.id === "Carprofeno" && t.id === "Cathartiformes") {
+    return "⛔ 100% LETAL EM URUBUS: Induz necrose tubular renal aguda e gota visceral em 24–48h (usar apenas Meloxicam!).";
+  }
+  if (f.id === "Metadona" && t.id === "Serpentes") {
+    return "⚠️ Baixa eficácia analgésica isolada em serpentes (preferir Tramadol + bloqueio local).";
+  }
+  if (f.id === "Escopolamina" && (t.grupo.includes("Aves") || t.grupo.includes("Répteis"))) {
+    return "⚠️ Não indicado na rotina de aves e répteis (risco de estase GI/ingluvial e espessamento de secreções).";
+  }
+  if (f.id === "Pentabiotico" && (t.id === "Miomorfos" || t.grupo.includes("Répteis"))) {
+    return "⛔ Contraindicado: Risco elevado de nefrotoxicidade/bloqueio neuromuscular pela Estreptomicina e toxicidade da Procaína.";
+  }
+  return "⛔ Contraindicado ou não recomendado para este táxon.";
+}
+
+function gerarViasAutomaticas(f) {
+  const todasVias = Object.values(f.faixasPorGrupo || {}).map(g => g.via || "").join(" ").toUpperCase();
+  const res = [];
+  if (todasVias.includes("VO") || (f.compMg && f.compMg.length > 0)) res.push(["VO", "✅", "Via oral disponível conforme apresentação e restrições específicas do táxon."]);
+  if (todasVias.includes("SC")) res.push(["SC", "✅", "Via subcutânea descrita na literatura para o fármaco (verificar necessidade de diluição)."]);
+  if (todasVias.includes("IM")) res.push(["IM", "✅", "Via intramuscular aplicável (em répteis, usar metade cranial/membros anteriores; em aves, dividir peitoral se > 0,35 mL)."]);
+  if (todasVias.includes("IV")) res.push(["IV", "✅", "Via intravenosa aplicável (administrar lentamente conforme bula e monitoramento)."]);
+  if (res.length === 0) res.push(["Geral", "ℹ️", "Consultar a aba 'Posologia (Todos os Táxons)' para a via específica de cada espécie."]);
+  return res;
+}
+
+function renderFichaCompletaFarmaco() {
+  const el = garantirContainerFichaFarmaco();
+  const fIdx = fichaFarmacoIdxAtual;
+  const f = FARMACOS_DB[fIdx];
+  if (!f) return;
+
+  const extra = MONOGRAFIAS_EXTRA[f.id] || {};
+  const classe = extra.classe || CLASSES_PADRAO_FARMACO[f.id] || "Fármaco de uso clínico veterinário";
+  const validade = extra.validade || "Seguir bula do fabricante e manter protegido de luz e calor.";
+  const viasList = extra.vias || gerarViasAutomaticas(f);
+  const { idx: tAtivoIdx, t: tAtivo } = getTaxonAtual();
+  const kgCalc = getPesoEfetivoKg();
+  const { doseAtiva, concAtiva } = getConfigFarmacoParaTaxon(f, tAtivoIdx, tAtivo);
+  const isUI = f.id === "Pentabiotico";
+  const mlAtivo = doseAtiva > 0 ? ((kgCalc * doseAtiva) / concAtiva) : 0;
+
+  // Coletar todas as fontes de todos os grupos do fármaco
+  const todasFontes = [];
+  const vistas = new Set();
+  Object.entries(f.faixasPorGrupo || {}).forEach(([grp, cfg]) => {
+    (cfg.fontes || []).forEach(ft => {
+      const chave = ft[0] + ft[1];
+      if (!vistas.has(chave)) {
+        vistas.add(chave);
+        todasFontes.push({ grupo: grp === "Padrao" ? "Geral / Multiespécie" : grp, titulo: ft[0], texto: ft[1], selo: ft[2] });
+      }
+    });
+  });
+
+  const btnAba = (id, label) => {
+    const on = fichaAbaAtiva === id;
+    return `<button type="button" onclick="mudarAbaFichaFarmaco('${id}')" class="px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${on ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-300 border border-slate-800 hover:border-slate-600'}">${label}</button>`;
+  };
+
+  let corpoAba = "";
+
+  if (fichaAbaAtiva === "posologia") {
+    corpoAba = `
+      <div class="space-y-3">
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input id="ficha-busca-taxon" type="text" oninput="renderTabelaPosologiaFicha()" placeholder="🔍 Filtrar espécie ou grupo (ex: gato, coruja, coelho, quati, jabuti)..." class="flex-1 bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none">
+          <div id="ficha-filtros-status" class="flex flex-wrap gap-1.5"></div>
+        </div>
+        <div id="ficha-lista-posologia" class="space-y-2"></div>
+      </div>
+    `;
+  } else if (fichaAbaAtiva === "geral") {
+    corpoAba = `
+      <div class="space-y-3.5">
+        <div class="core-card p-3.5 space-y-2">
+          <div class="text-xs font-bold uppercase tracking-wider text-emerald-400">Especificações Farmacotécnicas</div>
+          <div class="divide-y divide-slate-800/80 text-xs">
+            <div class="py-2 flex flex-col sm:flex-row sm:justify-between gap-1"><span class="text-slate-400">Classe Farmacológica</span><strong class="text-white sm:text-right">${classe}</strong></div>
+            <div class="py-2 flex flex-col sm:flex-row sm:justify-between gap-1"><span class="text-slate-400">Nomes Comerciais</span><strong class="text-amber-300 sm:text-right">${f.comercial}</strong></div>
+            <div class="py-2 flex flex-col sm:flex-row sm:justify-between gap-1"><span class="text-slate-400">Apresentação Padrão</span><span class="text-slate-200 sm:text-right">${f.apres}</span></div>
+            <div class="py-2 flex flex-col sm:flex-row sm:justify-between gap-1"><span class="text-slate-400">Concentrações / Frascos</span><span class="text-slate-200 sm:text-right">${(f.frascos || []).map(fr => fr.label).join(" &bull; ")}</span></div>
+            ${f.compMg && f.compMg.length ? `<div class="py-2 flex flex-col sm:flex-row sm:justify-between gap-1"><span class="text-slate-400">Comprimidos Comerciais</span><span class="text-emerald-300 font-semibold sm:text-right">${f.compMg.join(" mg, ")} mg</span></div>` : ''}
+            <div class="py-2 flex flex-col sm:flex-row sm:justify-between gap-1"><span class="text-slate-400">Validade / Conservação</span><span class="text-slate-200 sm:text-right">${validade}</span></div>
+          </div>
+        </div>
+
+        <div class="core-card p-3.5 space-y-1.5">
+          <div class="text-xs font-bold uppercase tracking-wider text-blue-400">Resumo Clínico &amp; Quando Utilizar</div>
+          <p class="text-xs text-slate-200 leading-relaxed">${f.resumoBulario}</p>
+        </div>
+
+        <div class="core-card p-3.5 space-y-2 border-rose-900/60">
+          <div class="text-xs font-bold uppercase tracking-wider text-rose-400">⚠️ Contraindicações &amp; Populações Especiais</div>
+          ${extra.populacoes ? `
+            <ul class="space-y-1.5 text-xs text-slate-200 leading-relaxed list-disc pl-4">
+              ${extra.populacoes.map(item => `<li>${item}</li>`).join("")}
+            </ul>
+          ` : `
+            <p class="text-xs text-slate-300 leading-relaxed">Avaliar estado de hidratação, função renal/hepática, faixa etária e restrições específicas do táxon na aba <strong>Posologia</strong> antes de prescrever. Consulte as citações completas na aba <strong>Fontes</strong>.</p>
+          `}
+        </div>
+      </div>
+    `;
+  } else if (fichaAbaAtiva === "vias") {
+    corpoAba = `
+      <div class="space-y-3.5">
+        <div class="core-card p-3.5 space-y-2.5">
+          <div class="text-xs font-bold uppercase tracking-wider text-blue-400">Vias de Administração &amp; Cuidados de Aplicação</div>
+          <div class="space-y-2">
+            ${viasList.map(([via, icone, desc]) => `
+              <div class="core-subcard p-2.5 flex items-start gap-2.5 text-xs">
+                <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 font-extrabold text-white mono shrink-0">${via} ${icone}</span>
+                <span class="text-slate-200 leading-relaxed">${desc}</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="core-card p-3.5 space-y-2.5">
+          <div class="flex flex-wrap justify-between items-center gap-2">
+            <div class="text-xs font-bold uppercase tracking-wider text-emerald-400">⚡ Cálculo Rápido p/ Paciente Atual (${tAtivo.nome} — ${formatarPesoExibicao(kgCalc)})</div>
+          </div>
+          ${doseAtiva > 0 ? `
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div class="p-3 rounded-xl bg-slate-950 border border-emerald-700/70">
+                <div class="text-[10px] text-slate-400 uppercase">Frasco Ativo (${concAtiva.toLocaleString("pt-BR")} ${isUI ? 'UI/mL' : 'mg/mL'})</div>
+                <div class="text-base font-extrabold text-emerald-400 mono mt-0.5">${mlAtivo.toFixed(3)} mL</div>
+                <div class="text-[11px] text-slate-400 mono">${(mlAtivo * 100).toFixed(1)} UI (Seringa U-100)</div>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-950 border border-blue-800/60">
+                <div class="text-[10px] text-slate-400 uppercase">Diluição 1:10</div>
+                <div class="text-base font-extrabold text-blue-400 mono mt-0.5">${(mlAtivo * 10).toFixed(2)} mL</div>
+                <div class="text-[10px] text-slate-400">0,1 mL fármaco + 0,9 mL NaCl 0,9%</div>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-950 border border-purple-800/60">
+                <div class="text-[10px] text-slate-400 uppercase">Diluição 1:100</div>
+                <div class="text-base font-extrabold text-purple-400 mono mt-0.5">${(mlAtivo * 100).toFixed(2)} mL</div>
+                <div class="text-[10px] text-slate-400">0,1 mL da 1:10 + 0,9 mL NaCl 0,9%</div>
+              </div>
+            </div>
+          ` : `
+            <div class="p-3 rounded-xl bg-rose-950/50 border border-rose-700/60 text-xs text-rose-200 font-semibold">
+              ⛔ Este fármaco está contraindicado ou sem indicação de rotina para o táxon ativo (${tAtivo.nome}).
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+  } else if (fichaAbaAtiva === "fontes") {
+    corpoAba = `
+      <div class="space-y-2.5">
+        <div class="text-xs font-bold uppercase tracking-wider text-amber-400">📚 Todas as Fontes Conferidas para ${f.nome}</div>
+        ${todasFontes.map(ft => `
+          <div class="core-card p-3.5 border-amber-700/40 space-y-1.5">
+            <div class="flex flex-wrap justify-between items-center gap-1.5">
+              <span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 font-bold uppercase">${ft.grupo}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold">${ft.selo}</span>
+            </div>
+            <div class="text-xs font-bold text-amber-300">${ft.titulo}</div>
+            <blockquote class="text-xs text-slate-200 italic border-l-2 border-amber-500 pl-2.5 py-0.5 leading-relaxed">"${ft.texto}"</blockquote>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  el.innerHTML = `
+    <div class="sticky top-0 z-10 glass-nav border-b border-slate-800 px-3 sm:px-5 py-3">
+      <div class="max-w-4xl mx-auto space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <button type="button" onclick="fecharFichaCompletaFarmaco()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 text-xs font-bold shrink-0">&larr; Voltar</button>
+          <div class="min-w-0 text-center">
+            <div class="text-sm sm:text-base font-extrabold text-white leading-tight break-words">💊 ${f.nome}</div>
+            <div class="text-[11px] text-amber-300 leading-tight">${f.comercial}</div>
+          </div>
+          <button type="button" onclick="fecharFichaCompletaFarmaco();enviarFarmacoParaAbaReceita(${fIdx})" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shrink-0">📝 Receita</button>
+        </div>
+
+        <div class="flex gap-1.5 overflow-x-auto pb-0.5">
+          ${btnAba("posologia", `🐾 Posologia (${TAXONS_DB.length} Táxons)`)}
+          ${btnAba("geral", "📋 Ficha & Alertas")}
+          ${btnAba("vias", "💉 Vias & Diluições")}
+          ${btnAba("fontes", `📚 Fontes (${todasFontes.length})`)}
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-3 sm:px-5 py-4 pb-16">
+      ${corpoAba}
+    </div>
+  `;
+
+  if (fichaAbaAtiva === "posologia") {
+    renderTabelaPosologiaFicha();
+  }
+}
+
+function renderTabelaPosologiaFicha() {
+  const box = document.getElementById("ficha-lista-posologia");
+  const barSt = document.getElementById("ficha-filtros-status");
+  if (!box) return;
+
+  const f = FARMACOS_DB[fichaFarmacoIdxAtual];
+  const extra = MONOGRAFIAS_EXTRA[f.id] || {};
+  const isUI = f.id === "Pentabiotico";
+  const uDose = isUI ? "UI/kg" : "mg/kg";
+  const termo = normalizarTextoBusca(document.getElementById("ficha-busca-taxon")?.value || "");
+  const { idx: tAtivoIdx } = getTaxonAtual();
+  const kgCalc = getPesoEfetivoKg();
+
+  const linhas = TAXONS_DB.map((t, tIdx) => {
+    const { doseAtiva, concAtiva, grupoCfg } = getConfigFarmacoParaTaxon(f, tIdx, t);
+    const proibido = doseAtiva === 0 || grupoCfg.status === "proibido";
+    const cautela = !proibido && (grupoCfg.status === "alerta" || Boolean(extra.notasTaxon && extra.notasTaxon[t.id]));
+    const sit = proibido ? "proibido" : (cautela ? "cautela" : "liberado");
+
+    const opcoesValidas = (grupoCfg.opcoes || []).filter(x => x > 0);
+    const faixaTxt = (!proibido && opcoesValidas.length > 1)
+      ? `${isUI ? opcoesValidas[0].toLocaleString("pt-BR") : opcoesValidas[0]} a ${isUI ? opcoesValidas[opcoesValidas.length - 1].toLocaleString("pt-BR") : opcoesValidas[opcoesValidas.length - 1]} ${uDose}`
+      : "";
+
+    const motivo = proibido
+      ? (grupoCfg.status === "proibido" ? `${grupoCfg.badge} — ${grupoCfg.via}` : getMotivoBloqueioGenerico(f, t))
+      : ((extra.notasTaxon && extra.notasTaxon[t.id]) ? extra.notasTaxon[t.id] : grupoCfg.badge);
+
+    const buscaAlvo = normalizarTextoBusca(t.nome + " " + t.grupo + " " + (t.subespecies || []).map(s => s.nome).join(" "));
+    return { t, tIdx, doseAtiva, concAtiva, grupoCfg, sit, faixaTxt, motivo, buscaAlvo };
+  });
+
+  const cLib = linhas.filter(l => l.sit === "liberado").length;
+  const cCau = linhas.filter(l => l.sit === "cautela").length;
+  const cPro = linhas.filter(l => l.sit === "proibido").length;
+
+  if (barSt) {
+    const opts = [
+      ["todos", `Todos (${linhas.length})`],
+      ["liberado", `✅ Liberados (${cLib})`],
+      ["cautela", `⚠️ Cautela (${cCau})`],
+      ["proibido", `⛔ Proibidos (${cPro})`]
+    ];
+    barSt.innerHTML = opts.map(([id, lbl]) => {
+      const on = fichaFiltroStatus === id;
+      return `<button type="button" onclick="setFiltroStatusFicha('${id}')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border ${on ? 'bg-blue-600 text-white border-blue-400' : 'bg-slate-900 text-slate-300 border-slate-800'}">${lbl}</button>`;
+    }).join("");
+  }
+
+  const filtradas = linhas.filter(l => {
+    if (fichaFiltroStatus !== "todos" && l.sit !== fichaFiltroStatus) return false;
+    if (termo && !l.buscaAlvo.includes(termo)) return false;
+    return true;
+  });
+
+  if (filtradas.length === 0) {
+    box.innerHTML = `<div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400 text-center">Nenhum táxon encontrado para esse filtro.</div>`;
+    return;
+  }
+
+  box.innerHTML = filtradas.map(l => {
+    const isAtual = l.tIdx === tAtivoIdx;
+    const mlAtual = (isAtual && l.doseAtiva > 0) ? ((kgCalc * l.doseAtiva) / l.concAtiva) : 0;
+
+    let badgeSit = `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold shrink-0">✅ Liberado</span>`;
+    let borda = "border-slate-800 bg-slate-900/70";
+    if (l.sit === "proibido") {
+      badgeSit = `<span class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 text-[10px] font-bold shrink-0">⛔ Proibido</span>`;
+      borda = "border-rose-900/70 bg-rose-950/20";
+    } else if (l.sit === "cautela") {
+      badgeSit = `<span class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-bold shrink-0">⚠️ Com cautela</span>`;
+      borda = "border-amber-800/60 bg-amber-950/15";
+    }
+
+    return `
+      <div class="p-3 rounded-xl border ${isAtual ? 'border-emerald-500 ring-1 ring-emerald-500/40' : borda} space-y-1.5">
+        <div class="flex flex-wrap items-center justify-between gap-1.5">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <strong class="text-xs sm:text-sm text-white">${l.t.nome}</strong>
+            ${isAtual ? `<span class="px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 text-[10px] font-extrabold">★ PACIENTE ATUAL</span>` : ''}
+          </div>
+          ${badgeSit}
+        </div>
+
+        ${l.sit !== "proibido" ? `
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-xs pt-0.5">
+            <div class="bg-slate-950/80 border border-slate-800/80 rounded-lg px-2.5 py-1.5">
+              <span class="text-[10px] text-slate-400 uppercase block">Dose Padrão</span>
+              <strong class="text-emerald-400 mono">${isUI ? l.doseAtiva.toLocaleString("pt-BR") : l.doseAtiva} ${uDose}</strong>
+              ${l.faixaTxt ? `<span class="text-[10px] text-slate-400 block">Faixa: ${l.faixaTxt}</span>` : ''}
+            </div>
+            <div class="sm:col-span-2 bg-slate-950/80 border border-slate-800/80 rounded-lg px-2.5 py-1.5">
+              <span class="text-[10px] text-slate-400 uppercase block">Via &amp; Intervalo</span>
+              <span class="text-slate-200 leading-snug">${l.grupoCfg.via}</span>
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="text-[11px] ${l.sit === 'proibido' ? 'text-rose-200 font-medium' : (l.sit === 'cautela' ? 'text-amber-200' : 'text-slate-300')} leading-relaxed">
+          ${l.motivo}
+        </div>
+
+        ${isAtual && mlAtual > 0 ? `
+          <div class="text-[11px] text-emerald-300 font-bold mono pt-0.5">
+            💉 Volume calculado p/ ${formatarPesoExibicao(kgCalc)}: ${formatarVolumeSeguro(mlAtual)}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join("");
+}
+
+// 3. Conectar a Aba 5 (Bulário) para abrir a Ficha Completa ao tocar em qualquer fármaco
+renderBularioCompleto = function() {
+  const termo = normalizarTextoBusca(document.getElementById("busca-bulario")?.value || "");
+  const filtrados = FARMACOS_DB.filter(f => {
+    const cls = (MONOGRAFIAS_EXTRA[f.id]?.classe || CLASSES_PADRAO_FARMACO[f.id] || "");
+    return normalizarTextoBusca(f.nome + " " + f.comercial + " " + f.resumoBulario + " " + cls).includes(termo);
+  });
+
+  document.getElementById("lista-bulario-completo").innerHTML = filtrados.map(f => {
+    const fIdx = FARMACOS_DB.indexOf(f);
+    const cls = MONOGRAFIAS_EXTRA[f.id]?.classe || CLASSES_PADRAO_FARMACO[f.id] || "";
+    return `<div onclick="abrirFichaCompletaFarmaco(${fIdx})" class="core-subcard p-3.5 hover:border-emerald-500/60 transition cursor-pointer space-y-1.5">
+      <div class="flex justify-between items-start gap-2">
+        <strong class="text-xs sm:text-sm text-white">💊 ${f.nome}</strong>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-semibold shrink-0">Abrir Ficha Completa &rarr;</span>
+      </div>
+      ${cls ? `<div class="text-[10px] text-blue-300 font-semibold">${cls}</div>` : ''}
+      <div class="text-[11px] text-amber-300 font-medium">Comercial: ${f.comercial} &bull; ${f.apres}</div>
+      <p class="text-xs text-slate-300 leading-relaxed line-clamp-3">${f.resumoBulario}</p>
+    </div>`;
+  }).join("");
+};
+
+// 4. Adicionar botão "Abrir Ficha Completa (Todos os Táxons)" no topo do modal rápido do Prontuário
+const _oldAbrirModalFarmaco = abrirModalFarmaco;
+abrirModalFarmaco = function(fIdx) {
+  _oldAbrirModalFarmaco(fIdx);
+  const corpo = document.getElementById("modal-corpo");
+  if (corpo && !corpo.querySelector("#btn-ver-ficha-completa")) {
+    const banner = document.createElement("button");
+    banner.id = "btn-ver-ficha-completa";
+    banner.type = "button";
+    banner.onclick = () => abrirFichaCompletaFarmaco(fIdx, "posologia");
+    banner.className = "w-full py-2 px-3 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 text-xs font-bold transition";
+    banner.textContent = `📖 Abrir Ficha Completa (${TAXONS_DB.length} Táxons, Vias, Populações & Fontes)`;
+    corpo.prepend(banner);
+  }
+};
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") fecharFichaCompletaFarmaco();
+});
+
+setTimeout(() => { renderBularioCompleto(); }, 250);
