@@ -35,24 +35,24 @@
 <header class="fixed top-0 inset-x-0 z-40 glass-nav border-b border-slate-800/80 px-3 sm:px-5 py-2">
   <div class="max-w-6xl mx-auto flex flex-col gap-2">
     
-    <!-- Linha 1: Logo Estilizada + Seletor de Pacientes Salvos + Cofre do Sistema -->
-    <div class="flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-xl overflow-hidden bg-[#0B0F17] flex items-center justify-center shadow-md border border-emerald-500/20 shrink-0">
+    <!-- Linha 1: Logo Estilizada + Seletor de Pacientes Salvos + Login Compacto (Sem cortar no celular) -->
+    <div class="flex items-center justify-between gap-1.5">
+      <div class="flex items-center gap-2 shrink-0">
+        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl overflow-hidden bg-[#0B0F17] flex items-center justify-center shadow-md border border-emerald-500/20 shrink-0">
           <img src="icon.png" alt="VC" class="w-full h-full object-cover scale-[1.32]" onerror="this.outerHTML='<span class=\'font-black text-xs text-emerald-400\'>VC</span>'">
         </div>
-        <div class="text-base sm:text-lg tracking-tight leading-none">
+        <div class="text-sm sm:text-lg tracking-tight leading-none">
           <span class="font-normal text-slate-200">Vet</span><span class="font-extrabold text-emerald-400">Core</span>
         </div>
       </div>
 
-      <div class="flex items-center gap-1.5">
-        <select id="sel-pacientes-salvos" onchange="carregarPacienteSalvo(this.value)" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500 max-w-[165px]">
+      <div class="flex items-center gap-1 min-w-0">
+        <select id="sel-pacientes-salvos" onchange="carregarPacienteSalvo(this.value)" class="bg-slate-900 border border-slate-700 text-[11px] text-slate-200 rounded-lg px-1.5 py-1.5 outline-none focus:border-emerald-500 max-w-[105px] sm:max-w-[165px] truncate">
           <option value="">🩺 Pacientes (0)</option>
         </select>
-        <button onclick="salvarPacienteAtual()" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold" title="Salvar Prontuário e Evolução">💾 Salvar</button>
-        <button onclick="novoPacienteLimpo()" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold" title="Novo Paciente">➕</button>
-        <button onclick="abrirModalGuia('admin')" class="px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold"><span id="label-btn-conta">👤 Login</span></button>
+        <button onclick="salvarPacienteAtual()" class="px-2 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold shrink-0" title="Salvar Prontuário">💾 <span class="hidden sm:inline">Salvar</span></button>
+        <button onclick="novoPacienteLimpo()" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-bold shrink-0" title="Novo Paciente">➕</button>
+        <button onclick="abrirModalGuia('admin')" class="px-2 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-semibold shrink-0"><span id="label-btn-conta">👤 Login</span></button>
       </div>
     </div>
 
