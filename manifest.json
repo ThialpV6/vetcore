@@ -8,8 +8,8 @@
   "start_url": "/vetcore/index.html",
   "scope": "/vetcore/",
   "display": "standalone",
-  "background_color": "#0B0F17",
-  "theme_color": "#0B0F17",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "orientation": "portrait-primary",
   "icons": [
     {

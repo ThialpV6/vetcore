@@ -1,81 +1,70 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0B0F17">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta id="meta-theme-color" name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>VetCore</title>
-<link rel="manifest" href="/vetcore/manifest.json">
-<link rel="icon" type="image/png" href="/vetcore/icon.png">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2310b981'/%3E%3Cstop offset='100%25' stop-color='%230f766e'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='Arial,sans-serif' font-weight='900' font-size='28' letter-spacing='-1'%3EVC%3C/text%3E%3C/svg%3E">
 <link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" href="./icon.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2314b8a6'/%3E%3Cstop offset='100%25' stop-color='%230f766e'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='Arial,sans-serif' font-weight='900' font-size='28' letter-spacing='-1'%3EVC%3C/text%3E%3C/svg%3E">
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<style>
-  :root { --bg-core: #0B0F17; --border-subtle: rgba(148, 163, 184, 0.14); }
-  body { font-family: 'Inter', sans-serif; background: radial-gradient(circle at top, #131B2E 0%, #0B0F17 70%); background-color: var(--bg-core); color: #F1F5F9; min-height: 100vh; -webkit-tap-highlight-color: transparent; }
-  .mono { font-family: 'JetBrains Mono', monospace; }
-  .glass-nav { background: rgba(11, 15, 23, 0.92); backdrop-filter: blur(16px); }
-  .core-card { background: rgba(19, 27, 46, 0.88); border: 1px solid var(--border-subtle); border-radius: 14px; }
-  .core-subcard { background: rgba(11, 15, 23, 0.68); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 10px; }
-  .paper-preview { background: #ffffff; color: #0f172a; font-family: 'Times New Roman', Georgia, serif; }
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-  @media print {
-    body * { visibility: hidden; }
-    #print-area, #print-area * { visibility: visible; }
-    #print-area { position: absolute; left: 0; top: 0; width: 100%; background: white !important; color: black !important; padding: 20px; box-shadow: none !important; }
-  }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css">
+<script>
+  (function(){
+    var t = localStorage.getItem("vetcore_theme_v1") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+    var m = document.getElementById("meta-theme-color");
+    if (m) m.setAttribute("content", t === "light" ? "#F4F6F9" : "#000000");
+  })();
+</script>
 </head>
-<body class="pb-24 pt-44 md:pt-32">
+<body class="pb-24 pt-16">
 
-<!-- CABEÇALHO GLOBAL CLEAN & RESPONSIVO (ZERO CORTES EM CELULAR) -->
-<header class="fixed top-0 inset-x-0 z-40 glass-nav border-b border-slate-800/80 px-3 sm:px-5 py-2.5">
-  <div class="max-w-6xl mx-auto flex flex-col gap-2">
-    
-    <!-- Linha 1: Marca VetCore + Ações Rápidas (Sem aperto lateral) -->
-    <div class="flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2 shrink-0">
-        <div class="w-8 h-8 rounded-xl overflow-hidden bg-[#0B0F17] flex items-center justify-center shadow border border-emerald-500/20 shrink-0">
-          <img src="icon.png" alt="VC" class="w-full h-full object-cover scale-[1.32]" onerror="this.outerHTML='<span class=\'font-black text-xs text-emerald-400\'>VC</span>'">
-        </div>
-        <div class="text-base sm:text-lg tracking-tight leading-none">
-          <span class="font-normal text-slate-200">Vet</span><span class="font-extrabold text-emerald-400">Core</span>
-        </div>
-      </div>
+<!-- ======================================================================= -->
+<!-- CABEÇALHO COMPACTO (56px) — PÍLULA DO PACIENTE + BUSCA + TEMA + CONTA   -->
+<!-- ======================================================================= -->
+<header class="fixed top-0 inset-x-0 z-40 vc-glass vc-header h-14 px-3 sm:px-5 flex items-center">
+  <div class="max-w-6xl mx-auto w-full flex items-center justify-between gap-2">
 
-      <div class="flex items-center gap-1.5">
-        <button onclick="salvarPacienteAtual()" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold">💾 Salvar</button>
-        <button onclick="novoPacienteLimpo()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold" title="Novo Atendimento">➕ Novo</button>
-        <button onclick="abrirModalGuia('admin')" class="px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold"><span id="label-btn-conta">👤 Login</span></button>
+    <!-- Marca + Pílula Clicável do Paciente -->
+    <div class="flex items-center gap-2 min-w-0 flex-1">
+      <div class="w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center border shrink-0" style="background:var(--bg-elevated);border-color:var(--border-subtle)">
+        <img src="icon.png" alt="VC" class="w-full h-full object-cover scale-[1.28]" onerror="this.outerHTML='<span class=\'font-extrabold text-xs vc-accent-text\'>VC</span>'">
       </div>
+      <span class="hidden sm:inline text-base tracking-tight shrink-0 mr-1">
+        <span class="font-medium vc-secondary">Vet</span><span class="font-extrabold vc-accent-text">Core</span>
+      </span>
+
+      <button type="button" onclick="abrirSheetPaciente()" class="vc-patient-pill min-w-0" title="Alterar paciente, espécie ou peso">
+        <span id="pill-paciente-resumo" class="truncate">Gato Adulto</span>
+        <span class="vc-muted">&middot;</span>
+        <span id="pill-paciente-peso" class="mono vc-accent-text font-bold shrink-0">4.00 kg</span>
+        <svg class="w-3.5 h-3.5 vc-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
     </div>
 
-    <!-- Linha 2: Seletor de Pacientes Salvos em Largura Livre -->
-    <div>
-      <select id="sel-pacientes-salvos" onchange="carregarPacienteSalvo(this.value)" class="w-full bg-slate-900/90 border border-slate-800 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500">
-        <option value="">🩺 Prontuários Salvos (0)</option>
-      </select>
-    </div>
+    <!-- Ações Rápidas (Ícones Vetoriais Traço Fino) -->
+    <div class="flex items-center gap-1.5 shrink-0">
+      <button type="button" onclick="abrirBuscaGlobal()" class="vc-icon-btn" title="Busca Global (Ctrl+K)" aria-label="Buscar">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      </button>
 
-    <!-- Linha 3: Seleção Taxonômica Legível + Peso Reativo [g | kg] -->
-    <div class="grid grid-cols-12 gap-1.5 sm:gap-2 items-center">
-      <div class="col-span-6 sm:col-span-5">
-        <select id="g-tax" onchange="trocarGrupoTaxonomico()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs font-semibold text-white outline-none focus:border-emerald-500"></select>
-      </div>
-      <div class="col-span-6 sm:col-span-4">
-        <select id="g-subesp" onchange="trocarSubespecie()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs font-medium text-emerald-300 outline-none focus:border-emerald-500"></select>
-      </div>
-      <div class="col-span-12 sm:col-span-3 flex items-center bg-slate-900 border border-slate-700 rounded-xl p-0.5 focus-within:border-emerald-500">
-        <span class="text-[11px] text-slate-400 pl-2.5 pr-1 font-semibold">Peso:</span>
-        <input id="g-peso" type="number" step="any" value="4.0" oninput="atualizarPesoGlobal()" class="w-full bg-transparent px-1.5 py-1 text-xs sm:text-sm font-bold text-white outline-none mono" placeholder="0.0">
-        <div class="flex bg-slate-950 rounded-lg p-0.5 border border-slate-800 shrink-0">
-          <button id="btn-u-g" type="button" onclick="setUnidade('g')" class="px-2.5 py-1 rounded-md text-[11px] font-bold text-slate-400">g</button>
-          <button id="btn-u-kg" type="button" onclick="setUnidade('kg')" class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-600 text-white">kg</button>
-        </div>
-      </div>
+      <button type="button" onclick="alternarTemaVetCore()" id="btn-tema" class="vc-icon-btn" title="Alternar Claro / Escuro AMOLED" aria-label="Alternar tema">
+        <svg id="ico-tema-sol" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        <svg id="ico-tema-lua" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+
+      <button type="button" onclick="salvarPacienteAtual()" class="vc-icon-btn hidden sm:inline-flex" title="Salvar Prontuário" aria-label="Salvar">
+        <svg class="w-4 h-4 vc-accent-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      </button>
+
+      <button type="button" onclick="abrirModalGuia('admin')" class="vc-icon-btn" title="Conta e Sincronização" aria-label="Conta">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span id="dot-conta-online" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style="background:var(--ok)"></span>
+      </button>
     </div>
 
   </div>
@@ -84,33 +73,38 @@
 <main class="max-w-6xl mx-auto px-3 sm:px-5 pt-2">
 
   <!-- ===================================================================== -->
-  <!-- ABA 1: 📋 PRONTUÁRIO COMPLETO (5 SEÇÕES + SANGUE + LINHA DO TEMPO)    -->
+  <!-- ABA 1: PRONTUÁRIO (4 SUB-ABAS CLÍNICAS — ZERO SCROLL INFINITO)        -->
   <!-- ===================================================================== -->
-  <section id="tab-prontuario" class="tab-view space-y-4">
-    
-    <!-- Painel Metabólico Automático + Guia de Coleta Segura de Sangue -->
-    <div id="card-metabolico" class="core-card p-3.5 sm:p-4 space-y-2.5"></div>
+  <section id="tab-prontuario" class="tab-view space-y-3.5">
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-      
-      <!-- COLUNA ESQUERDA: DADOS DO PACIENTE, ANAMNESE, EXAME FÍSICO, COMPLEMENTAR E DIAGNÓSTICO -->
-      <div class="lg:col-span-6 space-y-3.5">
+    <!-- Barra Segmentada do Prontuário -->
+    <div class="vc-segmented overflow-x-auto no-scrollbar">
+      <button type="button" id="subp-btn-resumo" onclick="alternarSubProntuario('resumo')" class="vc-seg-btn active">Resumo</button>
+      <button type="button" id="subp-btn-clinico" onclick="alternarSubProntuario('clinico')" class="vc-seg-btn">Clínico</button>
+      <button type="button" id="subp-btn-ia" onclick="alternarSubProntuario('ia')" class="vc-seg-btn">Análise IA</button>
+      <button type="button" id="subp-btn-prescricao" onclick="alternarSubProntuario('prescricao')" class="vc-seg-btn">Prescrição</button>
+    </div>
 
-        <!-- 1. INFORMAÇÕES DO PACIENTE & TUTOR / ORIGEM (Padrão SimplesVet) -->
-        <div class="core-card p-4 space-y-2.5">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">1. Identificação do Paciente & Origem</span>
-            <select id="p-status" class="bg-rose-950/80 border border-rose-700/70 text-rose-200 text-[11px] font-bold px-2 py-0.5 rounded-md outline-none">
-              <option value="Internado">🏥 Animal Internado</option>
-              <option value="Ambulatorial">🩺 Atendimento Ambulatorial</option>
-              <option value="Alta">✅ Alta Médica</option>
+    <!-- SUB-ABA 1.1: RESUMO (METABÓLICO + IDENTIFICAÇÃO + LINHA DO TEMPO) -->
+    <div id="subp-resumo" class="space-y-3.5">
+      <div id="card-metabolico" class="vc-card p-3.5 sm:p-4 space-y-3"></div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+        <!-- Identificação do Paciente -->
+        <div class="lg:col-span-7 vc-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b vc-divider">
+            <span class="vc-section-label">Identificação do Paciente &amp; Origem</span>
+            <select id="p-status" class="vc-select !w-auto !py-1 !px-2.5 !text-xs font-semibold">
+              <option value="Internado">Animal Internado</option>
+              <option value="Ambulatorial">Atendimento Ambulatorial</option>
+              <option value="Alta">Alta Médica</option>
             </select>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <div><label class="text-[10px] text-slate-400 uppercase">Paciente / Anilha / Nº</label><input id="p-nome" type="text" oninput="sincronizarCabecalhoReceita()" placeholder="Ex: Raul (308)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white"></div>
-            <div><label class="text-[10px] text-slate-400 uppercase">Raça / Nome Comum</label><input id="p-raca" type="text" oninput="sincronizarCabecalhoReceita()" placeholder="Ex: SRD / Rolinha" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white"></div>
-            <div><label class="text-[10px] text-slate-400 uppercase">Sexo / Reprodutivo</label>
-              <select id="p-sexo" onchange="sincronizarCabecalhoReceita()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <div><label class="vc-field-label">Paciente / Anilha / Nº</label><input id="p-nome" type="text" oninput="atualizarPillCabecalho();sincronizarCabecalhoReceita()" placeholder="Ex: Raul (308)" class="vc-input"></div>
+            <div><label class="vc-field-label">Raça / Nome Comum</label><input id="p-raca" type="text" oninput="sincronizarCabecalhoReceita()" placeholder="Ex: SRD / Rolinha" class="vc-input"></div>
+            <div><label class="vc-field-label">Sexo / Reprodutivo</label>
+              <select id="p-sexo" onchange="sincronizarCabecalhoReceita()" class="vc-select">
                 <option value="Macho, Fértil">Macho, Fértil</option>
                 <option value="Macho, Castrado">Macho, Castrado</option>
                 <option value="Fêmea, Fértil">Fêmea, Fértil</option>
@@ -118,89 +112,120 @@
                 <option value="Sexo Indeterminado">Indeterminado</option>
               </select>
             </div>
-            <div><label class="text-[10px] text-slate-400 uppercase">Idade / Faixa Etária</label><input id="p-idade" type="text" oninput="sincronizarCabecalhoReceita()" placeholder="Ex: 3 anos / Jovem" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white"></div>
-            <div><label class="text-[10px] text-slate-400 uppercase">Tutor / Procedência</label><input id="p-tutor" type="text" oninput="sincronizarCabecalhoReceita()" placeholder="Ex: Amanda / CETAS" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white"></div>
-            <div><label class="text-[10px] text-slate-400 uppercase">Telefone / Registro</label><input id="p-contato" type="text" oninput="sincronizarCabecalhoReceita()" placeholder="(24) 99999-9999" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white"></div>
+            <div><label class="vc-field-label">Idade / Faixa Etária</label><input id="p-idade" type="text" oninput="sincronizarCabecalhoReceita()" placeholder="Ex: 3 anos / Jovem" class="vc-input"></div>
+            <div><label class="vc-field-label">Tutor / Procedência</label><input id="p-tutor" type="text" oninput="sincronizarCabecalhoReceita()" placeholder="Ex: Amanda / CETAS" class="vc-input"></div>
+            <div><label class="vc-field-label">Telefone / Registro</label><input id="p-contato" type="text" oninput="sincronizarCabecalhoReceita()" placeholder="(24) 99999-9999" class="vc-input"></div>
+          </div>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button type="button" onclick="salvarPacienteAtual()" class="vc-btn vc-btn-primary flex-1 sm:flex-none">Salvar Evolução</button>
+            <button type="button" onclick="novoPacienteLimpo()" class="vc-btn vc-btn-secondary">Novo Atendimento</button>
+            <button type="button" onclick="copiarProntuarioCompleto()" class="vc-btn vc-btn-secondary">Copiar Ficha</button>
           </div>
         </div>
 
-        <!-- 2. ANAMNESE & HISTÓRICO -->
-        <div class="core-card p-4 space-y-2.5">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-            <span class="text-xs font-bold uppercase tracking-wider text-amber-400">2. Anamnese & Histórico Clínico</span>
-            <div class="flex gap-1.5">
-              <button onclick="document.getElementById('box-criar-sinal').classList.toggle('hidden')" class="text-[11px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-blue-300 border border-slate-700 font-semibold">➕ Criar Achado</button>
-              <button onclick="document.getElementById('gaveta-semiologia').classList.toggle('hidden')" class="text-[11px] px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold">Quadros ▾</button>
+        <!-- Linha do Tempo -->
+        <div class="lg:col-span-5 vc-card p-4 space-y-2.5">
+          <div class="flex items-center justify-between pb-2.5 border-b vc-divider">
+            <span class="vc-section-label">Linha do Tempo do Paciente</span>
+            <button type="button" onclick="abrirSheetPaciente()" class="text-xs font-semibold vc-accent-text hover:underline">Trocar paciente</button>
+          </div>
+          <div id="timeline-paciente" class="space-y-2 text-xs vc-muted max-h-72 overflow-y-auto pr-1">Nenhum histórico salvo para este paciente ainda.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB-ABA 1.2: CLÍNICO (ANAMNESE + EXAME FÍSICO + ESCALAS + LABORATÓRIO) -->
+    <div id="subp-clinico" class="hidden space-y-3.5">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+
+        <!-- Anamnese & Exame Físico -->
+        <div class="lg:col-span-6 space-y-3.5">
+          <!-- Anamnese -->
+          <div class="vc-card p-4 space-y-2.5">
+            <div class="flex items-center justify-between pb-2 border-b vc-divider">
+              <span class="vc-section-label">Anamnese &amp; Achados Clínicos</span>
+              <div class="flex gap-1.5">
+                <button type="button" onclick="document.getElementById('box-criar-sinal').classList.toggle('hidden')" class="vc-btn vc-btn-secondary !py-1 !px-2.5 !text-[11px]">Novo Achado</button>
+                <button type="button" onclick="document.getElementById('gaveta-semiologia').classList.toggle('hidden')" class="vc-btn vc-btn-soft !py-1 !px-2.5 !text-[11px]">Quadros</button>
+              </div>
             </div>
+
+            <div id="box-criar-sinal" class="hidden vc-subcard p-3 space-y-2">
+              <div class="text-xs font-bold vc-accent-text">Cadastrar Achado Clínico Permanente</div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input id="new-sig-nome" type="text" placeholder="Nome (Ex: Fratura Exposta)" class="vc-input !py-1.5 !text-xs">
+                <input id="new-sig-foco" type="text" placeholder="Fármacos foco (Ex: Clindamicina, Metadona)" class="vc-input !py-1.5 !text-xs">
+              </div>
+              <textarea id="new-sig-conduta" rows="2" placeholder="Conduta clínica direcionada..." class="vc-textarea !text-xs"></textarea>
+              <button type="button" onclick="salvarNovoSinalCustom()" class="vc-btn vc-btn-primary w-full">Salvar no Banco</button>
+            </div>
+
+            <div id="gaveta-semiologia" class="hidden vc-subcard p-3">
+              <div id="pills-sinais" class="flex flex-wrap gap-1.5"></div>
+            </div>
+
+            <textarea id="p-anam" rows="3" oninput="analisarTextoAnamnese()" class="vc-textarea" placeholder="Queixa principal, tempo de evolução, ambiente/dieta, tratamentos prévios (detecta automaticamente palavras-chave como miíase, ascite, ouriço, TCE)..."></textarea>
+            <div id="barra-detectados" class="space-y-2"></div>
           </div>
 
-          <!-- Criador Rápido de Novo Achado Permanente -->
-          <div id="box-criar-sinal" class="hidden core-subcard p-3 space-y-2">
-            <div class="text-xs font-bold text-blue-400">➕ Cadastrar Novo Quadro / Achado Clínico Permanente</div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input id="new-sig-nome" type="text" placeholder="Nome (Ex: 🦴 Fratura Exposta)" class="bg-slate-950 border border-slate-700 rounded p-1.5 text-xs text-white">
-              <input id="new-sig-foco" type="text" placeholder="Fármacos foco (Ex: Clindamicina, Metadona)" class="bg-slate-950 border border-slate-700 rounded p-1.5 text-xs text-white">
+          <!-- Exame Físico & Sinais Vitais -->
+          <div class="vc-card p-4 space-y-3">
+            <span class="vc-section-label block pb-2 border-b vc-divider">Exame Físico &amp; Parâmetros Vitais</span>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div class="vc-subcard p-2.5 space-y-1.5">
+                <div class="flex justify-between items-center"><label class="vc-field-label !mb-0">Temp (°C)</label><button type="button" onclick="abrirModalGuia('temp')" class="text-[10px] font-bold vc-info-text hover:underline">Faixas</button></div>
+                <input id="p-temp" type="number" step="0.1" value="38.2" oninput="atualizarPesoGlobal()" class="vc-input !py-1.5 mono font-bold">
+              </div>
+              <div class="vc-subcard p-2.5 space-y-1.5">
+                <div class="flex justify-between items-center"><label class="vc-field-label !mb-0">Desidratação</label><button type="button" onclick="abrirModalGuia('desid')" class="text-[10px] font-bold vc-info-text hover:underline">Avaliar</button></div>
+                <select id="p-des" onchange="atualizarPesoGlobal()" class="vc-select !py-1.5">
+                  <option value="0">0% (Normal)</option><option value="5">5% (Leve)</option><option value="6" selected>6% (Moderada)</option><option value="8">8% (Forte)</option><option value="10">10% (Grave)</option><option value="12">12% (Choque)</option>
+                </select>
+              </div>
+              <div class="vc-subcard p-2.5 space-y-1.5">
+                <div class="flex justify-between items-center"><label class="vc-field-label !mb-0">ECC / Massa</label><button type="button" onclick="abrirModalGuia('ecc')" class="text-[10px] font-bold vc-info-text hover:underline">Escala</button></div>
+                <select id="p-ecc" class="vc-select !py-1.5"></select>
+              </div>
             </div>
-            <textarea id="new-sig-conduta" rows="2" placeholder="Conduta clínica direcionada para este achado..." class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-xs text-white"></textarea>
-            <button onclick="salvarNovoSinalCustom()" class="w-full py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-bold">Salvar no Banco</button>
+
+            <div id="status-termico" class="vc-alert"></div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div><label class="vc-field-label">FC (bpm)</label><input id="p-fc" type="text" placeholder="160 bpm" class="vc-input !py-1.5"></div>
+              <div><label class="vc-field-label">FR (mpm)</label><input id="p-fr" type="text" placeholder="32 mpm" class="vc-input !py-1.5"></div>
+              <div><label class="vc-field-label">Mucosas</label><input id="p-mucosas" type="text" placeholder="Normocoradas" class="vc-input !py-1.5"></div>
+              <div><label class="vc-field-label">TPC (seg)</label><input id="p-tpc" type="text" placeholder="< 2s" class="vc-input !py-1.5"></div>
+            </div>
+
+            <textarea id="p-exame-fisico" rows="3" class="vc-textarea" placeholder="Exame físico segmentar (ausculta, palpação abdominal/celômica, lesões tegumentares, exame neurológico/oftálmico)..."></textarea>
           </div>
-
-          <!-- Gaveta Recolhível de Quadros Clínicos -->
-          <div id="gaveta-semiologia" class="hidden core-subcard p-3"><div id="pills-sinais" class="flex flex-wrap gap-1.5"></div></div>
-
-          <textarea id="p-anam" rows="3" oninput="analisarTextoAnamnese()" class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl p-2.5 text-xs text-slate-100 outline-none" placeholder="Queixa principal, tempo de evolução, ambiente/dieta, tratamentos prévios (detecta automaticamente palavras-chave como miíase, ascite, ouriço, TCE)..."></textarea>
-          <div id="barra-detectados" class="space-y-2"></div>
         </div>
 
-        <!-- 3. EXAME FÍSICO COMPLETO & ESCALAS POR ESPÉCIE -->
-        <div class="core-card p-4 space-y-2.5">
-          <span class="text-xs font-bold uppercase tracking-wider text-blue-400 block border-b border-slate-800 pb-2">3. Exame Físico & Parâmetros Semiológicos</span>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div class="core-subcard p-2 space-y-1">
-              <div class="flex justify-between items-center"><label class="text-[10px] text-slate-400 uppercase">Temp (°C)</label><button onclick="abrirModalGuia('temp')" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 font-semibold">? Faixas</button></div>
-              <input id="p-temp" type="number" step="0.1" value="38.2" oninput="atualizarPesoGlobal()" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs font-bold text-white mono">
-            </div>
-            <div class="core-subcard p-2 space-y-1">
-              <div class="flex justify-between items-center"><label class="text-[10px] text-slate-400 uppercase">Desidratação</label><button onclick="abrirModalGuia('desid')" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 font-semibold">? Avaliar</button></div>
-              <select id="p-des" onchange="atualizarPesoGlobal()" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-1 text-xs font-semibold text-white">
-                <option value="0">0% (Normal)</option><option value="5">5% (Leve)</option><option value="6" selected>6% (Moderada)</option><option value="8">8% (Forte)</option><option value="10">10% (Grave)</option><option value="12">12% (Choque)</option>
-              </select>
-            </div>
-            <div class="core-subcard p-2 space-y-1">
-              <div class="flex justify-between items-center"><label class="text-[10px] text-slate-400 uppercase">ECC / Massa</label><button onclick="abrirModalGuia('ecc')" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 font-semibold">? Escala</button></div>
-              <select id="p-ecc" class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-1 text-xs font-semibold text-white"></select>
-            </div>
-          </div>
-
-          <div id="status-termico" class="p-2.5 rounded-xl text-xs"></div>
-
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <div><label class="text-[10px] text-slate-400 uppercase">FC (bpm)</label><input id="p-fc" type="text" placeholder="Ex: 160 bpm" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white"></div>
-            <div><label class="text-[10px] text-slate-400 uppercase">FR (mpm)</label><input id="p-fr" type="text" placeholder="Ex: 32 mpm" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white"></div>
-            <div><label class="text-[10px] text-slate-400 uppercase">Mucosas</label><input id="p-mucosas" type="text" placeholder="Ex: Normocoradas" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white"></div>
-            <div><label class="text-[10px] text-slate-400 uppercase">TPC (seg)</label><input id="p-tpc" type="text" placeholder="Ex: < 2s" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white"></div>
-          </div>
-          <textarea id="p-exame-fisico" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 outline-none" placeholder="Alterações no exame físico segmentar (ausculta cardiopulmonar, palpação abdominal/celômica, lesões tegumentares, linfonodos, exame neurológico/oftálmico)..."></textarea>
-          <!-- ESCALAS CLÍNICAS INTERATIVAS (MCGS / FGS / CMPS-SF) -->
-          <details id="box-escalas-clinicas" class="rounded-xl bg-slate-950/90 border border-slate-800 text-xs">
-            <summary class="p-2.5 font-bold text-blue-300 cursor-pointer select-none flex items-center justify-between">
-              <span>📊 Escalas Clínicas: Glasgow (TCE) &amp; Dor (FGS / CMPS-SF)</span>
-              <span class="text-[10px] text-slate-400 font-normal">Abrir ▾</span>
+        <!-- Escalas Clínicas + Laboratório -->
+        <div class="lg:col-span-6 space-y-3.5">
+          <!-- Escalas Clínicas Interativas -->
+          <details id="box-escalas-clinicas" class="vc-card overflow-hidden">
+            <summary class="p-4 cursor-pointer select-none flex items-center justify-between">
+              <div>
+                <div class="vc-section-label">Escalas Clínicas Validadas</div>
+                <div class="text-xs vc-secondary mt-0.5">Glasgow Modificada (MCGS), Dor Felina (FGS) e Dor Canina (CMPS-SF)</div>
+              </div>
+              <span class="vc-badge vc-badge-accent">Abrir</span>
             </summary>
-            <div class="p-3 pt-2 border-t border-slate-800 space-y-3">
-              <div class="flex flex-wrap gap-1.5">
-                <button type="button" id="btn-esc-mcgs" onclick="alternarAbaEscala('mcgs')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-blue-600 text-white">🧠 Glasgow (TCE)</button>
-                <button type="button" id="btn-esc-fgs" onclick="alternarAbaEscala('fgs')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-900 text-slate-300 border border-slate-700">🐱 Dor Gatos (FGS)</button>
-                <button type="button" id="btn-esc-cmps" onclick="alternarAbaEscala('cmps')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-900 text-slate-300 border border-slate-700">🐶 Dor Cães (Glasgow)</button>
+            <div class="px-4 pb-4 pt-2 border-t vc-divider space-y-3">
+              <div class="vc-segmented">
+                <button type="button" id="btn-esc-mcgs" onclick="alternarAbaEscala('mcgs')" class="vc-seg-btn active">Glasgow (TCE)</button>
+                <button type="button" id="btn-esc-fgs" onclick="alternarAbaEscala('fgs')" class="vc-seg-btn">Dor Gatos (FGS)</button>
+                <button type="button" id="btn-esc-cmps" onclick="alternarAbaEscala('cmps')" class="vc-seg-btn">Dor Cães (CMPS)</button>
               </div>
 
-              <!-- 1. ESCALA DE COMA DE GLASGOW MODIFICADA (MCGS: 3 a 18) -->
+              <!-- MCGS -->
               <div id="painel-esc-mcgs" class="space-y-2.5">
-                <div id="alerta-mcgs-especie" class="hidden p-2 rounded-lg bg-amber-950/70 border border-amber-700/60 text-[11px] text-amber-200"></div>
+                <div id="alerta-mcgs-especie" class="hidden vc-alert vc-alert-warn"></div>
                 <div class="space-y-2">
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">1. Atividade Motora (1–6)</label>
-                    <select id="mcgs-motora" onchange="calcularMCGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                    <label class="vc-field-label">1. Atividade Motora (1–6)</label>
+                    <select id="mcgs-motora" onchange="calcularMCGS()" class="vc-select">
                       <option value="6">6 — Marcha e reflexos espinhais normais</option>
                       <option value="5">5 — Hemiparesia, tetraparesia ou descerebração intermitente</option>
                       <option value="4">4 — Decúbito, rigidez extensora intermitente</option>
@@ -210,8 +235,8 @@
                     </select>
                   </div>
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">2. Reflexos de Tronco Encefálico (1–6)</label>
-                    <select id="mcgs-tronco" onchange="calcularMCGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                    <label class="vc-field-label">2. Reflexos de Tronco Encefálico (1–6)</label>
+                    <select id="mcgs-tronco" onchange="calcularMCGS()" class="vc-select">
                       <option value="6">6 — RPL e oculocefálico normais</option>
                       <option value="5">5 — RPL lento; oculocefálico normal a reduzido</option>
                       <option value="4">4 — Miose bilateral; oculocefálico reduzido a ausente</option>
@@ -221,8 +246,8 @@
                     </select>
                   </div>
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">3. Nível de Consciência (1–6)</label>
-                    <select id="mcgs-consc" onchange="calcularMCGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                    <label class="vc-field-label">3. Nível de Consciência (1–6)</label>
+                    <select id="mcgs-consc" onchange="calcularMCGS()" class="vc-select">
                       <option value="6">6 — Alerta, períodos ocasionais de depressão</option>
                       <option value="5">5 — Depressão ou delírio, responde ao ambiente</option>
                       <option value="4">4 — Estupor (semicomatoso), responde a estímulo visual</option>
@@ -232,606 +257,675 @@
                     </select>
                   </div>
                 </div>
-                <div id="out-esc-mcgs" class="p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-xs"></div>
-                <button type="button" onclick="inserirEscalaNoExame('mcgs')" class="w-full py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs">➕ Inserir Escore MCGS no Exame Físico</button>
+                <div id="out-esc-mcgs" class="vc-subcard p-3 text-xs"></div>
+                <button type="button" onclick="inserirEscalaNoExame('mcgs')" class="vc-btn vc-btn-soft w-full">Inserir Escore MCGS no Exame Físico</button>
               </div>
 
-              <!-- 2. FELINE GRIMACE SCALE (FGS: 0 a 10 | Corte >= 4) -->
+              <!-- FGS -->
               <div id="painel-esc-fgs" class="hidden space-y-2.5">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Orelhas</label>
-                    <select id="fgs-orelhas" onchange="calcularFGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                    <label class="vc-field-label">Orelhas</label>
+                    <select id="fgs-orelhas" onchange="calcularFGS()" class="vc-select">
                       <option value="0">0 — Voltadas para frente</option>
                       <option value="1">1 — Ligeiramente afastadas</option>
                       <option value="2">2 — Achatadas e rotacionadas p/ fora</option>
                     </select>
                   </div>
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Aperto Orbital (Olhos)</label>
-                    <select id="fgs-olhos" onchange="calcularFGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                    <label class="vc-field-label">Aperto Orbital (Olhos)</label>
+                    <select id="fgs-olhos" onchange="calcularFGS()" class="vc-select">
                       <option value="0">0 — Abertos</option>
                       <option value="1">1 — Parcialmente fechados</option>
                       <option value="2">2 — Apertados / semicerrados</option>
                     </select>
                   </div>
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Tensão do Focinho</label>
-                    <select id="fgs-focinho" onchange="calcularFGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
-                      <option value="0">0 — Relaxado (formato redondo)</option>
+                    <label class="vc-field-label">Tensão do Focinho</label>
+                    <select id="fgs-focinho" onchange="calcularFGS()" class="vc-select">
+                      <option value="0">0 — Relaxado (redondo)</option>
                       <option value="1">1 — Levemente tenso</option>
-                      <option value="2">2 — Tenso (formato elíptico)</option>
+                      <option value="2">2 — Tenso (elíptico)</option>
                     </select>
                   </div>
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Posição dos Bigodes</label>
-                    <select id="fgs-bigodes" onchange="calcularFGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                    <label class="vc-field-label">Posição dos Bigodes</label>
+                    <select id="fgs-bigodes" onchange="calcularFGS()" class="vc-select">
                       <option value="0">0 — Soltos e curvados</option>
-                      <option value="1">1 — Levemente curvados ou retos</option>
-                      <option value="2">2 — Retos e projetados para frente</option>
+                      <option value="1">1 — Levemente curvados/retos</option>
+                      <option value="2">2 — Retos e projetados p/ frente</option>
                     </select>
                   </div>
                   <div class="sm:col-span-2">
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Posição da Cabeça</label>
-                    <select id="fgs-cabeca" onchange="calcularFGS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                    <label class="vc-field-label">Posição da Cabeça</label>
+                    <select id="fgs-cabeca" onchange="calcularFGS()" class="vc-select">
                       <option value="0">0 — Acima da linha dos ombros</option>
                       <option value="1">1 — Alinhada com os ombros</option>
                       <option value="2">2 — Abaixo dos ombros ou queixo no peito</option>
                     </select>
                   </div>
                 </div>
-                <div id="out-esc-fgs" class="p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-xs"></div>
-                <button type="button" onclick="inserirEscalaNoExame('fgs')" class="w-full py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs">➕ Inserir Escore FGS no Exame Físico</button>
+                <div id="out-esc-fgs" class="vc-subcard p-3 text-xs"></div>
+                <button type="button" onclick="inserirEscalaNoExame('fgs')" class="vc-btn vc-btn-soft w-full">Inserir Escore FGS no Exame Físico</button>
               </div>
 
-              <!-- 3. GLASGOW CURTA DE DOR EM CÃES (CMPS-SF: 0 a 24 | Corte >= 6/24 ou >= 5/20) -->
+              <!-- CMPS-SF -->
               <div id="painel-esc-cmps" class="hidden space-y-2.5">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Vocalização (0–3)</label>
-                    <select id="cmps-voc" onchange="calcularCMPS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
-                      <option value="0">0 — Quieto</option>
-                      <option value="1">1 — Choramingando / gemendo</option>
-                      <option value="2">2 — Gemido forte</option>
-                      <option value="3">3 — Gritando / uivando</option>
+                    <label class="vc-field-label">Vocalização (0–3)</label>
+                    <select id="cmps-voc" onchange="calcularCMPS()" class="vc-select">
+                      <option value="0">0 — Quieto</option><option value="1">1 — Choramingando / gemendo</option><option value="2">2 — Gemido forte</option><option value="3">3 — Gritando / uivando</option>
                     </select>
                   </div>
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Atenção à Ferida (0–4)</label>
-                    <select id="cmps-ferida" onchange="calcularCMPS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
-                      <option value="0">0 — Ignora a área dolorosa</option>
-                      <option value="1">1 — Olhando para a ferida</option>
-                      <option value="2">2 — Lambendo a ferida</option>
-                      <option value="3">3 — Esfregando a ferida</option>
-                      <option value="4">4 — Mordendo a ferida</option>
+                    <label class="vc-field-label">Atenção à Ferida (0–4)</label>
+                    <select id="cmps-ferida" onchange="calcularCMPS()" class="vc-select">
+                      <option value="0">0 — Ignora a área</option><option value="1">1 — Olhando</option><option value="2">2 — Lambendo</option><option value="3">3 — Esfregando</option><option value="4">4 — Mordendo</option>
                     </select>
                   </div>
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Resposta à Palpação Suave (0–5)</label>
-                    <select id="cmps-palp" onchange="calcularCMPS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
-                      <option value="0">0 — Sem reação</option>
-                      <option value="1">1 — Olha ao redor / tenciona</option>
-                      <option value="2">2 — Recua / encolhe</option>
-                      <option value="3">3 — Rosna ou protege o local</option>
-                      <option value="4">4 — Tenta morder</option>
-                      <option value="5">5 — Grita / chora à palpação</option>
+                    <label class="vc-field-label">Palpação Suave (0–5)</label>
+                    <select id="cmps-palp" onchange="calcularCMPS()" class="vc-select">
+                      <option value="0">0 — Sem reação</option><option value="1">1 — Olha / tenciona</option><option value="2">2 — Recua / encolhe</option><option value="3">3 — Rosna / protege</option><option value="4">4 — Tenta morder</option><option value="5">5 — Grita / chora</option>
                     </select>
                   </div>
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Postura &amp; Conforto (0–4)</label>
-                    <select id="cmps-post" onchange="calcularCMPS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
-                      <option value="0">0 — Confortável / relaxado</option>
-                      <option value="1">1 — Inquieto</option>
-                      <option value="2">2 — Rígido</option>
-                      <option value="3">3 — Arqueado / tenso</option>
-                      <option value="4">4 — Sem posição confortável / agitado</option>
+                    <label class="vc-field-label">Postura &amp; Conforto (0–4)</label>
+                    <select id="cmps-post" onchange="calcularCMPS()" class="vc-select">
+                      <option value="0">0 — Confortável</option><option value="1">1 — Inquieto</option><option value="2">2 — Rígido</option><option value="3">3 — Arqueado / tenso</option><option value="4">4 — Agitado / sem posição</option>
                     </select>
                   </div>
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Comportamento Geral (0–4)</label>
-                    <select id="cmps-comp" onchange="calcularCMPS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
-                      <option value="0">0 — Alegre / contente / interessado</option>
-                      <option value="1">1 — Quieto</option>
-                      <option value="2">2 — Indiferente ao ambiente</option>
-                      <option value="3">3 — Nervoso / ansioso / medroso</option>
-                      <option value="4">4 — Deprimido / não responsivo</option>
+                    <label class="vc-field-label">Comportamento Geral (0–4)</label>
+                    <select id="cmps-comp" onchange="calcularCMPS()" class="vc-select">
+                      <option value="0">0 — Alegre / contente</option><option value="1">1 — Quieto</option><option value="2">2 — Indiferente</option><option value="3">3 — Nervoso / ansioso</option><option value="4">4 — Deprimido / apático</option>
                     </select>
                   </div>
                   <div>
-                    <label class="text-[10px] text-slate-400 uppercase block mb-0.5">Mobilidade (Opcional: 0–4)</label>
-                    <select id="cmps-mob" onchange="calcularCMPS()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
-                      <option value="-1">Não avaliada (Paciente em decúbito/fratura — teto 20)</option>
-                      <option value="0">0 — Normal</option>
-                      <option value="1">1 — Claudicante</option>
-                      <option value="2">2 — Lento ou relutante ao levantar</option>
-                      <option value="3">3 — Rígido</option>
-                      <option value="4">4 — Recusa-se a mover</option>
+                    <label class="vc-field-label">Mobilidade (Opcional: 0–4)</label>
+                    <select id="cmps-mob" onchange="calcularCMPS()" class="vc-select">
+                      <option value="-1">Não avaliada (teto 20)</option><option value="0">0 — Normal</option><option value="1">1 — Claudicante</option><option value="2">2 — Lento ao levantar</option><option value="3">3 — Rígido</option><option value="4">4 — Recusa mover</option>
                     </select>
                   </div>
                 </div>
-                <div id="out-esc-cmps" class="p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-xs"></div>
-                <button type="button" onclick="inserirEscalaNoExame('cmps')" class="w-full py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs">➕ Inserir Escore CMPS-SF no Exame Físico</button>
+                <div id="out-esc-cmps" class="vc-subcard p-3 text-xs"></div>
+                <button type="button" onclick="inserirEscalaNoExame('cmps')" class="vc-btn vc-btn-soft w-full">Inserir Escore CMPS-SF no Exame Físico</button>
               </div>
             </div>
           </details>
-        </div>
 
-        <!-- 4. EXAMES COMPLEMENTARES & 5. DIAGNÓSTICO / SUSPEITA + CRUZAMENTO IA -->
-        <div class="core-card p-4 space-y-2.5">
-          <span class="text-xs font-bold uppercase tracking-wider text-purple-400 block border-b border-slate-800 pb-2">4. Exames Complementares & 5. Diagnóstico (Suspeita)</span>
-          <!-- Painel Laboratorial Reativo por Espécie (Campbell / Cubas) -->
-          <div id="barra-ref-especie" class="p-2 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-300"></div>
-          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            <div>
-              <label id="lbl-lab-ht" class="text-[10px] text-slate-400 uppercase block">Ht / VG (%)</label>
-              <input id="p-ht" type="number" step="any" oninput="avaliarExamesLab()" placeholder="Ex: 42" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white mono">
-              <span id="st-lab-ht" class="text-[10px] font-semibold"></span>
+          <!-- Laboratório & Diagnóstico -->
+          <div class="vc-card p-4 space-y-3">
+            <span class="vc-section-label block pb-2 border-b vc-divider">Laboratório por Espécie &amp; Suspeita Diagnóstica</span>
+            <div id="barra-ref-especie" class="vc-subcard p-2.5 text-[11px] vc-secondary leading-relaxed"></div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              <div class="vc-subcard p-2.5">
+                <label id="lbl-lab-ht" class="vc-field-label !text-[10px]">Ht / VG (%)</label>
+                <input id="p-ht" type="number" step="any" oninput="avaliarExamesLab()" placeholder="42" class="vc-input !py-1 !px-2 mono font-bold">
+                <div id="bar-lab-ht"></div>
+                <span id="st-lab-ht" class="text-[10px] font-bold block mt-1"></span>
+              </div>
+              <div class="vc-subcard p-2.5">
+                <label id="lbl-lab-ppt" class="vc-field-label !text-[10px]">PPT (g/dL)</label>
+                <input id="p-ppt" type="number" step="any" oninput="avaliarExamesLab()" placeholder="6.2" class="vc-input !py-1 !px-2 mono font-bold">
+                <div id="bar-lab-ppt"></div>
+                <span id="st-lab-ppt" class="text-[10px] font-bold block mt-1"></span>
+              </div>
+              <div class="vc-subcard p-2.5">
+                <label id="lbl-lab-glic" class="vc-field-label !text-[10px]">Glicemia (mg/dL)</label>
+                <input id="p-glic" type="number" step="any" oninput="avaliarExamesLab()" placeholder="95" class="vc-input !py-1 !px-2 mono font-bold">
+                <div id="bar-lab-glic"></div>
+                <span id="st-lab-glic" class="text-[10px] font-bold block mt-1"></span>
+              </div>
+              <div class="vc-subcard p-2.5">
+                <label id="lbl-lab-renal" class="vc-field-label !text-[10px]">Creat / Ác. Úrico</label>
+                <input id="p-renal" type="number" step="any" oninput="avaliarExamesLab()" placeholder="mg/dL" class="vc-input !py-1 !px-2 mono font-bold">
+                <div id="bar-lab-renal"></div>
+                <span id="st-lab-renal" class="text-[10px] font-bold block mt-1"></span>
+              </div>
+              <div class="vc-subcard p-2.5 col-span-2">
+                <label id="lbl-lab-hep" class="vc-field-label !text-[10px]">ALT / AST (U/L)</label>
+                <input id="p-hep" type="number" step="any" oninput="avaliarExamesLab()" placeholder="U/L" class="vc-input !py-1 !px-2 mono font-bold">
+                <div id="bar-lab-hep"></div>
+                <span id="st-lab-hep" class="text-[10px] font-bold block mt-1"></span>
+              </div>
             </div>
-            <div>
-              <label id="lbl-lab-ppt" class="text-[10px] text-slate-400 uppercase block">PPT (g/dL)</label>
-              <input id="p-ppt" type="number" step="any" oninput="avaliarExamesLab()" placeholder="Ex: 6.2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white mono">
-              <span id="st-lab-ppt" class="text-[10px] font-semibold"></span>
-            </div>
-            <div>
-              <label id="lbl-lab-glic" class="text-[10px] text-slate-400 uppercase block">Glicemia (mg/dL)</label>
-              <input id="p-glic" type="number" step="any" oninput="avaliarExamesLab()" placeholder="Ex: 95" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white mono">
-              <span id="st-lab-glic" class="text-[10px] font-semibold"></span>
-            </div>
-            <div>
-              <label id="lbl-lab-renal" class="text-[10px] text-slate-400 uppercase block">Creat / Ác. Úrico</label>
-              <input id="p-renal" type="number" step="any" oninput="avaliarExamesLab()" placeholder="mg/dL" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white mono">
-              <span id="st-lab-renal" class="text-[10px] font-semibold"></span>
-            </div>
-            <div class="col-span-2 sm:col-span-1">
-              <label id="lbl-lab-hep" class="text-[10px] text-slate-400 uppercase block">ALT / AST (U/L)</label>
-              <input id="p-hep" type="number" step="any" oninput="avaliarExamesLab()" placeholder="U/L" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white mono">
-              <span id="st-lab-hep" class="text-[10px] font-semibold"></span>
+
+            <input id="p-ht-ppt" type="hidden"><input id="p-pas" type="hidden">
+            <textarea id="p-complementares" rows="2" class="vc-textarea" placeholder="Hemograma, bioquímica adicional, análise de efusão, radiografia, AFAST/TFAST..."></textarea>
+            <input id="p-diagnostico" type="text" placeholder="Suspeita diagnóstica ou diagnóstico definitivo..." class="vc-input font-semibold">
+
+            <div class="flex gap-2">
+              <button type="button" onclick="alternarSubProntuario('ia');consultarCoPilotoIA('cruzamento')" class="vc-btn vc-btn-primary flex-1">Analisar Caso na IA</button>
+              <button type="button" onclick="salvarPacienteAtual()" class="vc-btn vc-btn-secondary">Salvar</button>
             </div>
           </div>
-          <!-- Mantém compatibilidade com campos antigos -->
-          <input id="p-ht-ppt" type="hidden"><input id="p-pas" type="hidden">
-          <textarea id="p-complementares" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 outline-none" placeholder="Resultados ou solicitação de Hemograma, Bioquímica (Ureia/Creatinina/Ác. Úrico/ALT/FA/Albumina), Análise de Efusão/Ascite, Radiografia, Ultrassom..."></textarea>
-          <input id="p-diagnostico" type="text" placeholder="🎯 Suspeita Diagnóstica / Diagnóstico Definitivo..." class="w-full bg-slate-950 border border-emerald-700/60 rounded-xl px-3 py-2 text-xs font-semibold text-emerald-200 outline-none">
-
-          <div class="flex flex-wrap gap-2 pt-1">
-            <button onclick="consultarCoPilotoIA('cruzamento')" class="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600/30 to-teal-700/30 hover:from-emerald-600/40 hover:to-teal-700/40 border border-emerald-500/50 text-xs font-bold text-emerald-300">
-              🤖 Cruzar Dados do Caso com as Fontes do Acervo (IA)
-            </button>
-            <button onclick="copiarProntuarioCompleto()" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200">📋 Copiar Ficha</button>
-          </div>
-          <div id="ia-resposta-caso" class="hidden"></div>
-          <div id="box-condutas-caso" class="space-y-2 pt-1"></div>
-        </div>
-
-      </div>
-      
-      <!-- FILTRO RÁPIDO E BUSCA DE FÁRMACOS NA PRESCRIÇÃO -->
-          <div class="space-y-2">
-            <input id="busca-prescricao" type="text" oninput="renderListaPrescricaoFiltrada()" placeholder="🔍 Filtrar fármaco ou comercial (ex: Dipirona, Synulox, Pentabiótico)..." class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs text-white outline-none">
-            <div id="filtros-prescricao" class="flex flex-wrap gap-1.5"></div>
-            <div id="cont-prescricao" class="text-[10px] text-slate-400"></div>
-          </div>
-
-      <!-- COLUNA DIREITA: PRESCRIÇÃO CALCULADA + LINHA DO TEMPO DO PACIENTE -->
-      <div class="lg:col-span-6 space-y-3.5">
-        <div class="core-card p-4 space-y-3">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-            <div>
-              <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">6. Prescrição Calculada & Fontes Conferidas</span>
-              <p class="text-[11px] text-slate-400">Toque no fármaco para ver citações conferidas, trocar frasco/dose ou enviar para a Receita</p>
-            </div>
-          </div>
-          <div id="lista-prescricao" class="space-y-2 max-h-[600px] overflow-y-auto pr-1"></div>
-        </div>
-
-        <!-- LINHA DO TEMPO DO PACIENTE (HISTÓRICO DE ATENDIMENTOS E RECEITAS SALVAS) -->
-        <div class="core-card p-4 space-y-2.5">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-            <span class="text-xs font-bold uppercase tracking-wider text-blue-400">🕒 Linha do Tempo do Paciente (Prontuários & Receitas)</span>
-          </div>
-          <div id="timeline-paciente" class="space-y-2 text-xs text-slate-400">Nenhum histórico salvo para este paciente ainda.</div>
         </div>
       </div>
-
     </div>
+
+    <!-- SUB-ABA 1.3: ANÁLISE IA & PROTOCOLOS DE TRAVA RÁPIDA -->
+    <div id="subp-ia" class="hidden space-y-3.5">
+      <div class="vc-card p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b vc-divider">
+          <div>
+            <div class="vc-section-label">Raciocínio Clínico Assistido (IA)</div>
+            <p class="text-xs vc-secondary mt-0.5">Cruza espécie, anamnese, sinais vitais e exames para diferenciais ranqueados sem repetir cards fixos.</p>
+          </div>
+          <div class="flex gap-2">
+            <button type="button" onclick="consultarCoPilotoIA('cruzamento')" class="vc-btn vc-btn-primary">Cruzar Dados com IA</button>
+            <button type="button" onclick="copiarProntuarioCompleto()" class="vc-btn vc-btn-secondary">Copiar Ficha</button>
+          </div>
+        </div>
+        <div id="ia-resumo-contexto" class="flex flex-wrap gap-1.5 text-[11px]"></div>
+        <div id="ia-resposta-caso" class="hidden"></div>
+      </div>
+
+      <div class="vc-card p-4 space-y-2.5">
+        <div class="flex items-center justify-between pb-2 border-b vc-divider">
+          <span class="vc-section-label">Protocolos de Trava Rápida (Base Offline)</span>
+          <button type="button" onclick="alternarSubProntuario('clinico')" class="text-xs font-semibold vc-accent-text hover:underline">Editar achados</button>
+        </div>
+        <div id="box-condutas-caso" class="space-y-2"></div>
+      </div>
+    </div>
+
+    <!-- SUB-ABA 1.4: PRESCRIÇÃO CALCULADA -->
+    <div id="subp-prescricao" class="hidden space-y-3">
+      <div class="vc-card p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b vc-divider">
+          <div>
+            <span class="vc-section-label">Prescrição Calculada &amp; Fontes Conferidas</span>
+            <p id="cont-prescricao" class="text-[11px] vc-muted mt-0.5"></p>
+          </div>
+          <button type="button" onclick="abrirSheetPaciente()" class="vc-btn vc-btn-soft !py-1 !px-2.5 !text-[11px]">Ajustar Peso / Espécie</button>
+        </div>
+
+        <input id="busca-prescricao" type="text" oninput="renderListaPrescricaoFiltrada()" placeholder="Filtrar princípio ativo ou nome comercial (ex: Dipirona, Synulox, Pentabiótico)..." class="vc-input">
+        <div id="filtros-prescricao" class="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5"></div>
+        <div id="lista-prescricao" class="space-y-2"></div>
+      </div>
+    </div>
+
   </section>
 
   <!-- ===================================================================== -->
-  <!-- ABA 2: 📝 RECEITAS (PADRÃO SIMPLESVET + CONVERSOR + ALTA/ENCAMINHAM.) -->
+  <!-- ABA 2: RECEITAS (RECEITA / RESUMO DE ALTA / ENCAMINHAMENTO)           -->
   <!-- ===================================================================== -->
-  <section id="tab-receitas" class="tab-view hidden space-y-4">
-    
-    <!-- Barra Superior Clean com Ícones Discretos para Receita / Resumo de Alta / Encaminhamento -->
-    <div class="core-card p-3.5 flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
-        <span class="text-sm font-extrabold text-white" id="titulo-modo-doc">📝 Receituário & Conversor de Apresentações</span>
-      </div>
-      <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
-        <button id="btn-doc-receita" onclick="alternarModoDocumento('receita')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white flex items-center gap-1.5" title="Receita Simples ou Controlada">💊 <span>Receita</span></button>
-        <button id="btn-doc-alta" onclick="alternarModoDocumento('alta')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5" title="Resumo de Alta e Cuidados">📄 <span>Alta</span></button>
-        <button id="btn-doc-encam" onclick="alternarModoDocumento('encam')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5" title="Termo de Encaminhamento Clínico/Cirúrgico">📨 <span>Encaminhar</span></button>
-      </div>
+  <section id="tab-receitas" class="tab-view hidden space-y-3.5">
+    <div class="vc-segmented max-w-md">
+      <button type="button" id="btn-doc-receita" onclick="alternarModoDocumento('receita')" class="vc-seg-btn active">Receita</button>
+      <button type="button" id="btn-doc-alta" onclick="alternarModoDocumento('alta')" class="vc-seg-btn">Resumo de Alta</button>
+      <button type="button" id="btn-doc-encam" onclick="alternarModoDocumento('encam')" class="vc-seg-btn">Encaminhamento</button>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-      
-      <!-- COLUNA ESQUERDA: CONVERSOR INSTANTÂNEO DE APRESENTAÇÃO E ADICIONADOR DE ITENS -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+      <!-- Construtor -->
       <div class="lg:col-span-5 space-y-3.5">
-        
-        <!-- Dados do Emitente e Tipo de Documento -->
-        <div class="core-card p-4 space-y-2.5">
-          <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-            <span class="text-xs font-bold uppercase tracking-wider text-blue-400">1. Emitente & Tipo de Receita</span>
-            <select id="rec-tipo" onchange="atualizarFolhaReceita()" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[11px] font-semibold text-amber-300">
+        <div class="vc-card p-4 space-y-2.5">
+          <div class="flex justify-between items-center pb-2 border-b vc-divider">
+            <span class="vc-section-label">Emitente &amp; Tipo</span>
+            <select id="rec-tipo" onchange="atualizarFolhaReceita()" class="vc-select !w-auto !py-1 !px-2.5 !text-xs font-semibold">
               <option value="Receita Simples">Receita Simples</option>
-              <option value="Receita de Controle Especial">Receita Controlada Especial</option>
+              <option value="Receita de Controle Especial">Controle Especial</option>
             </select>
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <input id="emit-nome" type="text" oninput="salvarEmitente()" placeholder="Médico(a) Veterinário(a)" class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white">
-            <input id="emit-crmv" type="text" oninput="salvarEmitente()" placeholder="CRMV (Ex: CRMV-RJ 00000)" class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white">
-            <input id="emit-end" type="text" oninput="salvarEmitente()" placeholder="Clínica / Endereço / Cidade - UF" class="col-span-2 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white">
+            <input id="emit-nome" type="text" oninput="salvarEmitente()" placeholder="Médico(a) Veterinário(a)" class="vc-input">
+            <input id="emit-crmv" type="text" oninput="salvarEmitente()" placeholder="CRMV-RJ 00000" class="vc-input">
+            <input id="emit-end" type="text" oninput="salvarEmitente()" placeholder="Clínica / Endereço / Cidade - UF" class="col-span-2 vc-input">
           </div>
         </div>
 
-        <!-- Conversor Automático Injetável <-> Comprimido <-> Suspensão/Gotas (Ou Adição Manual) -->
-        <div id="painel-construtor-receita" class="core-card p-4 space-y-3">
-          <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 block border-b border-slate-800 pb-2">2. ⚡ Conversor de Apresentação & Construtor</span>
-          
-          <div class="space-y-2">
+        <div id="painel-construtor-receita" class="vc-card p-4 space-y-3">
+          <span class="vc-section-label block pb-2 border-b vc-divider">Conversor de Apresentação &amp; Construtor</span>
+
+          <div class="space-y-2.5">
             <div>
-              <label class="text-[10px] text-slate-400 uppercase">Puxar Fármaco Calculado (ou digitar abaixo):</label>
-              <select id="rec-sel-farmaco" onchange="preencherConversorReceita()" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white"></select>
+              <label class="vc-field-label">Puxar Fármaco Calculado</label>
+              <select id="rec-sel-farmaco" onchange="preencherConversorReceita()" class="vc-select"></select>
             </div>
 
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="text-[10px] text-slate-400 uppercase">Via (Cabeçalho):</label>
-                <select id="rec-via-grupo" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs font-bold text-white">
-                  <option value="Uso Oral:">Uso Oral:</option>
-                  <option value="Uso Tópico:">Uso Tópico:</option>
-                  <option value="Uso Oftálmico / Otológico:">Uso Oftálmico / Otológico:</option>
-                  <option value="Uso Injetável / Subcutâneo:">Uso Injetável / Subcutâneo:</option>
+                <label class="vc-field-label">Via</label>
+                <select id="rec-via-grupo" class="vc-select">
+                  <option value="Uso Oral:">Uso Oral</option>
+                  <option value="Uso Tópico:">Uso Tópico</option>
+                  <option value="Uso Oftálmico / Otológico:">Oftálmico / Otológico</option>
+                  <option value="Uso Injetável / Subcutâneo:">Injetável / SC</option>
                 </select>
               </div>
               <div>
-                <label class="text-[10px] text-slate-400 uppercase">Farmácia:</label>
-                <select id="rec-uso-tipo" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-white">
-                  <option value="uso veterinário">uso veterinário</option>
-                  <option value="uso humano">uso humano</option>
-                  <option value="manipulado">manipulado</option>
+                <label class="vc-field-label">Farmácia</label>
+                <select id="rec-uso-tipo" class="vc-select">
+                  <option value="uso veterinário">Uso veterinário</option>
+                  <option value="uso humano">Uso humano</option>
+                  <option value="manipulado">Manipulado</option>
                 </select>
               </div>
             </div>
 
             <div class="grid grid-cols-3 gap-2">
               <div class="col-span-2">
-                <label class="text-[10px] text-slate-400 uppercase">Nome + Apresentação na Receita:</label>
-                <input id="rec-nome-item" type="text" placeholder="Ex: Prednisona 5mg ou Cloresten 2%" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs font-semibold text-white">
+                <label class="vc-field-label">Medicamento + Apresentação</label>
+                <input id="rec-nome-item" type="text" placeholder="Ex: Prednisolona 5 mg" class="vc-input font-semibold">
               </div>
               <div>
-                <label class="text-[10px] text-slate-400 uppercase">Embalagem:</label>
-                <input id="rec-embalagem" type="text" value="1 caixa" placeholder="caixa / frasco" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-white">
+                <label class="vc-field-label">Embalagem</label>
+                <input id="rec-embalagem" type="text" value="1 caixa" class="vc-input">
               </div>
             </div>
 
-            <!-- Resultado Instantâneo do Conversor de Comprimido / Gotas / mL -->
-            <div id="box-conversao-sugerida" class="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-700/50 text-xs text-emerald-200 space-y-1"></div>
+            <div id="box-conversao-sugerida" class="vc-alert vc-alert-accent space-y-1.5"></div>
 
             <div>
-              <label class="text-[10px] text-slate-400 uppercase">Posologia (Suporta múltiplas linhas / desmame):</label>
-              <textarea id="rec-posologia" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white" placeholder="Ex: Dar 1 comprimido de 12 em 12 horas, por 14 dias..."></textarea>
+              <label class="vc-field-label">Posologia</label>
+              <textarea id="rec-posologia" rows="3" class="vc-textarea" placeholder="Dar 1 comprimido de 12 em 12 horas, por 7 dias..."></textarea>
             </div>
             <div>
-              <label class="text-[10px] text-slate-400 uppercase">Observação em Itálico (Opcional):</label>
-              <input id="rec-obs-italico" type="text" placeholder="Ex: *dependendo do estado da pele podemos indicar o Hidrapet*" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-300 italic">
+              <label class="vc-field-label">Observação (Opcional)</label>
+              <input id="rec-obs-italico" type="text" placeholder="Nota adicional em itálico..." class="vc-input italic">
             </div>
 
-            <button onclick="adicionarItemNaReceita()" class="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">
-              ➕ Adicionar Item à Receita
-            </button>
+            <button type="button" onclick="adicionarItemNaReceita()" class="vc-btn vc-btn-primary w-full">Adicionar Item à Receita</button>
           </div>
-        </div>
-
-      </div>
-
-      <!-- COLUNA DIREITA: FOLHA ESTILO SIMPLESVET EDITÁVEL + SALVAR NO PRONTUÁRIO -->
-      <div class="lg:col-span-7 space-y-3">
-        <div class="core-card p-4 space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-            <span class="text-xs font-bold text-slate-300">📄 Visualização & Edição Livre (Clique no texto abaixo para editar manualmente)</span>
-            <div class="flex gap-1.5">
-              <button onclick="salvarReceitaNoProntuario()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">✔ Salvar no Prontuário</button>
-              <button onclick="window.print()" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">🖨️ Imprimir / PDF</button>
-              <button onclick="copiarTextoReceita()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold">📋 Copiar</button>
-              <button onclick="limparItensReceita()" class="px-2.5 py-1.5 rounded-lg bg-rose-950/80 text-rose-300 border border-rose-800 text-xs font-bold">🗑️</button>
-            </div>
-          </div>
-
-          <!-- Folha Branca Clássica Padrão SimplesVet (Editável diretamente!) -->
-          <div id="print-area" contenteditable="true" class="paper-preview rounded-xl p-6 sm:p-8 min-h-[460px] shadow-inner outline-none text-sm leading-relaxed space-y-4"></div>
         </div>
       </div>
 
+      <!-- Visualização da Folha -->
+      <div class="lg:col-span-7">
+        <div class="vc-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b vc-divider">
+            <span class="vc-section-label">Pré-visualização Editável</span>
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" onclick="salvarReceitaNoProntuario()" class="vc-btn vc-btn-primary !py-1.5 !px-3">Salvar</button>
+              <button type="button" onclick="compartilharReceitaWhatsApp()" class="vc-btn vc-btn-soft !py-1.5 !px-3">WhatsApp</button>
+              <button type="button" onclick="copiarTextoReceita()" class="vc-btn vc-btn-secondary !py-1.5 !px-3">Copiar</button>
+              <button type="button" onclick="window.print()" class="vc-btn vc-btn-secondary !py-1.5 !px-3">PDF / Imprimir</button>
+              <button type="button" onclick="limparItensReceita()" class="vc-btn vc-btn-danger !py-1.5 !px-2.5">Limpar</button>
+            </div>
+          </div>
+
+          <div id="print-area" contenteditable="true" class="paper-preview rounded-xl p-5 sm:p-8 min-h-[460px] outline-none text-sm leading-relaxed space-y-4"></div>
+        </div>
+      </div>
     </div>
   </section>
 
   <!-- ===================================================================== -->
-  <!-- ABA 3: 🧮 CÁLCULOS (DOSES, CRI PASSO A PASSO, SEDAÇÃO E EUTANÁSIA)    -->
+  <!-- ABA 3: CÁLCULOS (DOSES & UI UNIVERSAL | CRI | SEDAÇÃO | EUTANÁSIA)    -->
   <!-- ===================================================================== -->
-  <section id="tab-calc" class="tab-view hidden space-y-4">
-    
-    <!-- Sub-abas de Cálculos & Protocolos Posológicos -->
-    <div class="flex gap-1.5 overflow-x-auto pb-1">
-      <button onclick="alternarSubCalc('doses')" id="subbtn-doses" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white whitespace-nowrap">⚖️ Calculadora de Doses & CRI</button>
-      <button onclick="alternarSubCalc('sedacao')" id="subbtn-sedacao" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 border border-slate-800 whitespace-nowrap">💉 Protocolos de Sedação (da Espécie)</button>
-      <button onclick="alternarSubCalc('eutanasia')" id="subbtn-eutanasia" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 border border-slate-800 whitespace-nowrap">⚖️ Protocolo de Eutanásia (3 Etapas)</button>
+  <section id="tab-calc" class="tab-view hidden space-y-3.5">
+
+    <div class="vc-segmented overflow-x-auto no-scrollbar">
+      <button type="button" onclick="alternarSubCalc('doses')" id="subbtn-doses" class="vc-seg-btn active">Doses &amp; UI</button>
+      <button type="button" onclick="alternarSubCalc('cri')" id="subbtn-cri" class="vc-seg-btn">Infusão CRI</button>
+      <button type="button" onclick="alternarSubCalc('sedacao')" id="subbtn-sedacao" class="vc-seg-btn">Sedação</button>
+      <button type="button" onclick="alternarSubCalc('eutanasia')" id="subbtn-eutanasia" class="vc-seg-btn">Eutanásia</button>
     </div>
 
-    <!-- Painel 1: Calculadora de Doses + Infusão Contínua (CRI) -->
-    <div id="subcalc-doses" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="core-card p-4 space-y-3">
-        <h3 class="text-sm font-bold text-emerald-400 border-b border-slate-800 pb-2">⚖️ Calculadora de Doses</h3>
-        <div id="calc-drogas-pills" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto"></div>
+    <!-- Painel 3.1: Doses + Conversor Universal de UI -->
+    <div id="subcalc-doses" class="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+      <div class="vc-card p-4 space-y-3">
+        <span class="vc-section-label block pb-2 border-b vc-divider">Calculadora Livre de Doses (mg / µg)</span>
+        <div id="calc-drogas-pills" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto"></div>
         <div class="grid grid-cols-2 gap-2.5">
-          <div><label class="text-[11px] text-slate-400">Dose Desejada</label><input id="ca-dose" type="number" step="any" value="15" oninput="calcularDoseIsolada()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-bold text-white mono"></div>
-          <div><label class="text-[11px] text-slate-400">Unidade da Dose</label><select id="ca-udose" onchange="calcularDoseIsolada()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white"><option value="mg">mg/kg</option><option value="mcg">µg/kg</option></select></div>
-          <div><label class="text-[11px] text-slate-400">Concentração do Frasco</label><input id="ca-conc" type="number" step="any" value="50" oninput="calcularDoseIsolada()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-bold text-white mono"></div>
-          <div><label class="text-[11px] text-slate-400">Unidade do Frasco</label><select id="ca-uconc" onchange="calcularDoseIsolada()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white"><option value="mgml">mg/mL</option><option value="perc">% (×10 mg/mL)</option></select></div>
+          <div><label class="vc-field-label">Dose Desejada</label><input id="ca-dose" type="number" step="any" value="15" oninput="calcularDoseIsolada()" class="vc-input mono font-bold"></div>
+          <div><label class="vc-field-label">Unidade</label><select id="ca-udose" onchange="calcularDoseIsolada()" class="vc-select"><option value="mg">mg/kg</option><option value="mcg">µg/kg</option></select></div>
+          <div><label class="vc-field-label">Concentração do Frasco</label><input id="ca-conc" type="number" step="any" value="50" oninput="calcularDoseIsolada()" class="vc-input mono font-bold"></div>
+          <div><label class="vc-field-label">Unidade do Frasco</label><select id="ca-uconc" onchange="calcularDoseIsolada()" class="vc-select"><option value="mgml">mg/mL</option><option value="perc">% (×10 mg/mL)</option></select></div>
         </div>
-        <div id="ca-out-destaque" class="pt-1"></div>
+        <div id="ca-out-destaque"></div>
       </div>
 
-      <div class="core-card p-4 space-y-3">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-          <h3 class="text-sm font-bold text-blue-400">💧 Calculadora de Infusão Contínua (CRI)</h3>
-          <div class="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800">
-            <button id="btn-cri-novato" onclick="toggleModoCRI(true)" class="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white">🎓 Passo a Passo</button>
-            <button id="btn-cri-rapido" onclick="toggleModoCRI(false)" class="px-3 py-1 rounded-lg text-xs font-semibold text-slate-400">⚡ Resumo</button>
+      <!-- Calculadora & Conversor Universal de UI -->
+      <div class="vc-card p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b vc-divider">
+          <span class="vc-section-label">Calculadora &amp; Conversor Universal de UI</span>
+          <div class="vc-segmented !p-0.5">
+            <button id="btn-ui-dose" type="button" onclick="alternarModoUI('dose')" class="vc-seg-btn active !py-1 !px-2.5 !text-[11px]">UI/kg &rarr; mL</button>
+            <button id="btn-ui-massa" type="button" onclick="alternarModoUI('massa')" class="vc-seg-btn !py-1 !px-2.5 !text-[11px]">UI &harr; mg / µg</button>
+          </div>
+        </div>
+
+        <div id="ui-presets-pills" class="flex flex-wrap gap-1.5"></div>
+
+        <!-- Modo 1: UI/kg -> mL com reconstituição -->
+        <div id="painel-ui-dose" class="space-y-2.5">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div>
+              <label class="vc-field-label">Dose (UI/kg)</label>
+              <input id="uid-dose" type="number" step="any" value="30000" oninput="calcularDoseUI()" class="vc-input mono font-bold">
+            </div>
+            <div>
+              <label class="vc-field-label">UI Frasco (ou UI/mL)</label>
+              <input id="uid-frasco-ui" type="number" step="any" value="1200000" oninput="calcularDoseUI()" class="vc-input mono font-bold">
+            </div>
+            <div class="col-span-2 sm:col-span-1">
+              <label class="vc-field-label">Diluente mL (1 = UI/mL)</label>
+              <input id="uid-diluente" type="number" step="any" value="5" oninput="calcularDoseUI()" class="vc-input mono font-bold">
+            </div>
+          </div>
+          <div id="uid-resultado" class="vc-subcard p-3.5 text-xs"></div>
+        </div>
+
+        <!-- Modo 2: Equivalência livre UI <-> mg / mcg -->
+        <div id="painel-ui-massa" class="hidden space-y-2.5">
+          <div class="vc-subcard p-3 space-y-2">
+            <div class="text-[11px] font-bold vc-accent-text">1. Fator de Equivalência da Bula (livre para qualquer substância)</div>
+            <div class="grid grid-cols-3 gap-2">
+              <div><label class="vc-field-label">Cada (UI)</label><input id="uim-ref-ui" type="number" step="any" value="1600" oninput="converterUIUniversal()" class="vc-input mono font-bold"></div>
+              <div><label class="vc-field-label">Equivale a</label><input id="uim-ref-massa" type="number" step="any" value="1" oninput="converterUIUniversal()" class="vc-input mono font-bold"></div>
+              <div>
+                <label class="vc-field-label">Unidade</label>
+                <select id="uim-ref-unid" onchange="converterUIUniversal()" class="vc-select"><option value="mg" selected>mg</option><option value="mcg">µg (mcg)</option></select>
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div><label class="vc-field-label">2. Valor a Converter</label><input id="uim-valor" type="number" step="any" value="1200000" oninput="converterUIUniversal()" class="vc-input mono font-bold"></div>
+            <div>
+              <label class="vc-field-label">Unidade Digitada</label>
+              <select id="uim-dir" onchange="converterUIUniversal()" class="vc-select">
+                <option value="ui">UI &rarr; mg e µg</option>
+                <option value="mg">mg &rarr; UI</option>
+                <option value="mcg">µg &rarr; UI</option>
+              </select>
+            </div>
+          </div>
+          <div id="uim-resultado" class="vc-subcard p-3.5 text-xs"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Painel 3.2: CRI + Bombas Combinadas (FLK/MLK/FK/MK) -->
+    <div id="subcalc-cri" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+      <div class="vc-card p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b vc-divider">
+          <span class="vc-section-label">Infusão Contínua (CRI)</span>
+          <div class="vc-segmented !p-0.5">
+            <button id="btn-cri-novato" type="button" onclick="toggleModoCRI(true)" class="vc-seg-btn active !py-1 !px-2.5 !text-[11px]">Passo a Passo</button>
+            <button id="btn-cri-rapido" type="button" onclick="toggleModoCRI(false)" class="vc-seg-btn !py-1 !px-2.5 !text-[11px]">Resumo</button>
           </div>
         </div>
         <div id="cri-presets-pills" class="flex flex-wrap gap-1.5"></div>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          <div><label class="text-[11px] text-slate-400">Dose CRI</label><input id="cr-dose" type="number" step="any" value="3" oninput="calcularCRI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-bold text-white mono"></div>
-          <div><label class="text-[11px] text-slate-400">Unidade</label><select id="cr-unid" onchange="calcularCRI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white"><option value="mcg_min">µg/kg/min</option><option value="mcg_h" selected>µg/kg/h</option><option value="mg_h">mg/kg/h</option></select></div>
-          <div><label class="text-[11px] text-slate-400">Frasco (mg/mL)</label><input id="cr-conc" type="number" step="any" value="0.05" oninput="calcularCRI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-bold text-white mono"></div>
-          <div><label class="text-[11px] text-slate-400">Taxa Bomba (mL/h)</label><input id="cr-mlh" type="number" step="any" value="10" oninput="calcularCRI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-bold text-white mono"></div>
-          <div class="col-span-2"><label class="text-[11px] text-slate-400">Volume Seringa / Bolsa (mL)</label><input id="cr-bolsa" type="number" step="any" value="20" oninput="calcularCRI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-bold text-white mono"></div>
+          <div><label class="vc-field-label">Dose CRI</label><input id="cr-dose" type="number" step="any" value="3" oninput="calcularCRI()" class="vc-input mono font-bold"></div>
+          <div><label class="vc-field-label">Unidade</label><select id="cr-unid" onchange="calcularCRI()" class="vc-select"><option value="mcg_min">µg/kg/min</option><option value="mcg_h" selected>µg/kg/h</option><option value="mg_h">mg/kg/h</option></select></div>
+          <div><label class="vc-field-label">Frasco (mg/mL)</label><input id="cr-conc" type="number" step="any" value="0.05" oninput="calcularCRI()" class="vc-input mono font-bold"></div>
+          <div><label class="vc-field-label">Taxa (mL/h)</label><input id="cr-mlh" type="number" step="any" value="10" oninput="calcularCRI();renderBombasCombinadas()" class="vc-input mono font-bold"></div>
+          <div class="col-span-2"><label class="vc-field-label">Volume Seringa / Bolsa (mL)</label><input id="cr-bolsa" type="number" step="any" value="20" oninput="calcularCRI();renderBombasCombinadas()" class="vc-input mono font-bold"></div>
         </div>
         <div id="cr-out"></div>
-        <div id="box-bombas-combinadas" class="pt-3 border-t border-slate-800 space-y-2.5"></div>
-        
-        <!-- CONVERSOR DE UNIDADES INTERNACIONAIS (UI <-> MG / MCG / ML) -->
-        <div class="pt-3 border-t border-slate-800 space-y-2.5">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold text-amber-400">🔬 Conversor de Unidades Internacionais (UI &harr; mg / µg / mL)</span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div>
-              <label class="text-[10px] text-slate-400 uppercase">Substância / Padrão OMS</label>
-              <select id="ui-substancia" onchange="converterUI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white">
-                <option value="insulina">Insulina (1 UI = 0,0347 mg | U-100 = 100 UI/mL)</option>
-                <option value="vit_a">Vitamina A / Retinol (1 UI = 0,3 µg)</option>
-                <option value="vit_d">Vitamina D3 / Colecalciferol (1 UI = 0,025 µg)</option>
-                <option value="vit_e">Vitamina E / Alfa-tocoferol (1 UI = 0,67 mg)</option>
-                <option value="penicilina_g">Penicilina G Potássica/Procaína (1.600 UI = 1 mg)</option>
-                <option value="heparina">Heparina Sódica (100 UI &approx; 1 mg)</option>
-                <option value="ocitocina">Ocitocina (1 UI &approx; 1,68 µg)</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-[10px] text-slate-400 uppercase">Direção</label>
-              <select id="ui-direcao" onchange="converterUI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white">
-                <option value="ui_para_massa">Converter UI &rarr; mg / µg</option>
-                <option value="massa_para_ui">Converter mg &rarr; UI</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-[10px] text-slate-400 uppercase">Valor a Converter</label>
-              <input id="ui-valor" type="number" step="any" value="1000" oninput="converterUI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-bold text-white mono">
-            </div>
-          </div>
-          <div id="ui-resultado" class="p-3 rounded-xl bg-slate-950 border border-amber-700/50 text-xs text-slate-200"></div>
-        </div>
-    </div>
+      </div>
+
+      <div class="vc-card p-4 space-y-3">
+        <div id="box-bombas-combinadas" class="space-y-3"></div>
+      </div>
     </div>
 
-    <!-- Painel 2: Protocolos de Sedação & Contenção Química Calculados p/ o Peso Atual -->
-    <div id="subcalc-sedacao" class="hidden core-card p-4 space-y-3">
+    <!-- Painel 3.3: Sedação -->
+    <div id="subcalc-sedacao" class="hidden vc-card p-4 space-y-3">
       <div id="box-sedacao-especie" class="space-y-3"></div>
     </div>
 
-    <!-- Painel 3: Protocolo Completo de Eutanásia em 3 Etapas (CFMV / AVMA) -->
-    <div id="subcalc-eutanasia" class="hidden core-card p-4 space-y-3">
+    <!-- Painel 3.4: Eutanásia -->
+    <div id="subcalc-eutanasia" class="hidden vc-card p-4 space-y-3">
       <div id="box-eutanasia-especie" class="space-y-3"></div>
     </div>
 
   </section>
 
   <!-- ===================================================================== -->
-  <!-- ABA 4: 🚨 EMERGÊNCIA (PAINEL DE REANIMAÇÃO + XABCDE + MANOBRAS)       -->
+  <!-- ABA 4: EMERGÊNCIA                                                     -->
   <!-- ===================================================================== -->
-  <section id="tab-emergencia" class="tab-view hidden space-y-4">
-    
-    <!-- 1. Painel Instantâneo de Drogas de Emergência / PCR / Crise (Calculadas p/ o Peso Atual) -->
-    <div id="barra-materiais-emergencia" class="core-card p-3.5 border-blue-800/60"></div>
-    <div class="core-card p-4 space-y-3 border-rose-800/60">
-      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-        <div>
-          <h3 class="text-sm font-extrabold text-rose-400">⚡ Painel Rápido de Drogas de Emergência, PCR & Antídotos</h3>
-          <p class="text-[11px] text-slate-400">Volumes calculados em tempo real para a espécie e o peso selecionados no topo</p>
-        </div>
+  <section id="tab-emergencia" class="tab-view hidden space-y-3.5">
+    <div id="barra-materiais-emergencia" class="vc-card p-4"></div>
+
+    <div class="vc-card p-4 space-y-3">
+      <div class="pb-2 border-b vc-divider">
+        <span class="vc-section-label vc-danger-text">Drogas de Emergência, PCR &amp; Antídotos</span>
+        <p class="text-xs vc-secondary mt-0.5">Volumes calculados em tempo real para o táxon e peso ativos.</p>
       </div>
       <div id="grid-drogas-emergencia" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5"></div>
     </div>
 
-    <!-- 2. Protocolo XABCDE Interativo e Adaptado à Espécie -->
-    <div class="core-card p-4 space-y-3">
-      <h3 class="text-sm font-bold text-amber-400 border-b border-slate-800 pb-2">🚨 Protocolo XABCDE de Atendimento Inicial ao Trauma e Estabilização</h3>
-      <div id="box-xabcde" class="space-y-3"></div>
+    <div class="vc-card p-4 space-y-3">
+      <span class="vc-section-label block pb-2 border-b vc-divider">Protocolo XABCDE Adaptado à Espécie</span>
+      <div id="box-xabcde" class="space-y-2.5"></div>
     </div>
 
-    <!-- 3. Manobras Críticas Salva-Vidas Passo a Passo -->
-    <div class="core-card p-4 space-y-3">
-      <h3 class="text-sm font-bold text-blue-400 border-b border-slate-800 pb-2">🛠️ Procedimentos e Manobras de Emergência Passo a Passo</h3>
+    <div class="vc-card p-4 space-y-3">
+      <span class="vc-section-label block pb-2 border-b vc-divider">Manobras Críticas Passo a Passo</span>
       <div id="box-manobras-emergencia" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
     </div>
-
   </section>
 
   <!-- ===================================================================== -->
-  <!-- ABA 5: 📚 BULÁRIO & LIVROS (BULÁRIO + ACERVO CURADO + EXTRATOR IA)     -->
+  <!-- ABA 5: BULÁRIO & ACERVO                                               -->
   <!-- ===================================================================== -->
-  <section id="tab-fontes" class="tab-view hidden space-y-4">
-    <div class="flex gap-1.5 overflow-x-auto pb-1">
-      <button onclick="alternarSubFontes('bulario')" id="subf-bulario" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white whitespace-nowrap">💊 Bulário Completo Multi-Fonte</button>
-      <button onclick="alternarSubFontes('livros')" id="subf-livros" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 border border-slate-800 whitespace-nowrap">📚 Biblioteca Curada (Google Drive)</button>
-      <button onclick="alternarSubFontes('extrator')" id="subf-extrator" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 border border-slate-800 whitespace-nowrap">⚡ Extrator IA & +Adicionar Fonte</button>
+  <section id="tab-fontes" class="tab-view hidden space-y-3.5">
+    <div class="vc-segmented max-w-lg">
+      <button type="button" onclick="alternarSubFontes('bulario')" id="subf-bulario" class="vc-seg-btn active">Bulário</button>
+      <button type="button" onclick="alternarSubFontes('livros')" id="subf-livros" class="vc-seg-btn">Biblioteca (46)</button>
+      <button type="button" onclick="alternarSubFontes('extrator')" id="subf-extrator" class="vc-seg-btn">Adicionar / Extrator</button>
     </div>
 
-    <!-- Sub 1: Bulário Completo -->
-    <div id="painel-bulario" class="core-card p-4 space-y-3">
-      <input id="busca-bulario" type="text" oninput="renderBularioCompleto()" placeholder="🔍 Buscar por princípio ativo, nome comercial (Baytril, Synulox, Cerenia, Capstar, Maxicam) ou indicação..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-emerald-500">
-      <div id="lista-bulario-completo" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+    <div id="painel-bulario" class="vc-card p-4 space-y-3">
+      <input id="busca-bulario" type="text" oninput="renderBularioCompleto()" placeholder="Buscar princípio ativo, classe, nome comercial ou indicação..." class="vc-input">
+      <div id="lista-bulario-completo" class="grid grid-cols-1 md:grid-cols-2 gap-2.5"></div>
     </div>
 
-    <!-- Sub 2: Biblioteca Curada do Google Drive -->
-    <div id="painel-livros" class="hidden core-card p-4 space-y-3">
-      <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-2">
+    <div id="painel-livros" class="hidden vc-card p-4 space-y-3">
+      <div class="flex flex-wrap justify-between items-center gap-2 pb-2 border-b vc-divider">
         <div>
-          <h3 class="text-sm font-bold text-blue-400">📚 Acervo Clínico Curado (Google Drive)</h3>
-          <p class="text-[11px] text-slate-400">Apenas obras de relevância direta para clínica, cirurgia, emergência, anestesia, exóticos e diagnóstico</p>
+          <span class="vc-section-label">Acervo Clínico Curado (Google Drive)</span>
+          <p class="text-xs vc-secondary mt-0.5">Obras de referência em clínica, cirurgia, emergência, anestesia e exóticos.</p>
         </div>
-        <input id="busca-livros" type="text" oninput="renderCatalogoLivros()" placeholder="🔍 Filtrar livro ou área..." class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white">
+        <input id="busca-livros" type="text" oninput="renderCatalogoLivros()" placeholder="Filtrar livro ou área..." class="vc-input sm:!w-64">
       </div>
-      <div id="lista-livros-catalogo" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+      <div id="lista-livros-catalogo" class="grid grid-cols-1 md:grid-cols-2 gap-2.5"></div>
     </div>
 
-    <!-- Sub 3: Extrator IA e Cadastro de Novo Livro do Drive -->
-    <div id="painel-extrator" class="hidden space-y-4">
-      <div class="core-card p-4 space-y-3">
-        <h3 class="text-sm font-bold text-emerald-400">➕ Adicionar Novo Livro / Artigo do seu Google Drive à Base</h3>
+    <div id="painel-extrator" class="hidden space-y-3.5">
+      <div class="vc-card p-4 space-y-3">
+        <span class="vc-section-label block pb-2 border-b vc-divider">Adicionar Livro / Artigo do Drive à Base</span>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <input id="new-bk-titulo" type="text" placeholder="Título do Livro / Artigo" class="bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white">
-          <input id="new-bk-autores" type="text" placeholder="Autores / Edição" class="bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white">
-          <input id="new-bk-area" type="text" placeholder="Especialidade (Ex: Nefrologia / Répteis)" class="bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white">
+          <input id="new-bk-titulo" type="text" placeholder="Título da Obra" class="vc-input">
+          <input id="new-bk-autores" type="text" placeholder="Autores / Edição" class="vc-input">
+          <input id="new-bk-area" type="text" placeholder="Especialidade" class="vc-input">
         </div>
-        <input id="new-bk-url" type="url" placeholder="Link de visualização do PDF no Google Drive (https://drive.google.com/...)" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white">
-        <textarea id="new-bk-resumo" rows="2" placeholder="Resumo das informações/doses-chave desta obra para o cruzamento de dados..." class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white"></textarea>
-        <button onclick="adicionarLivroCustom()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white">💾 Salvar Livro no Acervo</button>
+        <input id="new-bk-url" type="url" placeholder="Link do PDF no Google Drive (https://drive.google.com/...)" class="vc-input">
+        <textarea id="new-bk-resumo" rows="2" placeholder="Resumo clínico ou doses-chave desta obra..." class="vc-textarea"></textarea>
+        <button type="button" onclick="adicionarLivroCustom()" class="vc-btn vc-btn-primary">Salvar Obra no Acervo</button>
       </div>
 
-      <div class="core-card p-4 space-y-3">
-        <h3 class="text-sm font-bold text-amber-400">⚡ Extrator Automático de Tabelas e Capítulos (Co-Piloto IA)</h3>
-        <textarea id="ia-input-livro" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white" placeholder="Cole qualquer trecho copiado de um PDF para a IA extrair e organizar as doses, páginas e alertas por espécie..."></textarea>
-        <button onclick="consultarCoPilotoIA('extrator')" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white">⚡ Processar Trecho com IA</button>
+      <div class="vc-card p-4 space-y-3">
+        <span class="vc-section-label block pb-2 border-b vc-divider">Extrator de Doses de PDFs (IA)</span>
+        <textarea id="ia-input-livro" rows="3" class="vc-textarea" placeholder="Cole um trecho de tabela ou texto de PDF para extrair doses, vias e alertas por espécie..."></textarea>
+        <button type="button" onclick="consultarCoPilotoIA('extrator')" class="vc-btn vc-btn-primary">Extrair Doses com IA</button>
         <div id="ia-resposta-extrator" class="hidden"></div>
       </div>
     </div>
   </section>
 
 </main>
-<!-- MODAL MULTIFUNCIONAL (DETALHES DO FÁRMACO, FRASCOS E GUIAS SEMIOLÓGICOS) -->
-<div id="modal-core" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-  <div class="bg-slate-900 border-t sm:border border-slate-700 rounded-t-2xl sm:rounded-2xl w-full max-w-xl p-4 sm:p-5 space-y-3.5 max-h-[90vh] overflow-y-auto shadow-2xl">
-    <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
-      <h3 id="modal-titulo" class="text-sm sm:text-base font-extrabold text-white"></h3>
-      <button onclick="fecharModal()" class="px-3 py-1 rounded-lg bg-slate-800 text-slate-300 text-xs font-bold">✕ Fechar</button>
+
+<!-- ======================================================================= -->
+<!-- BOTTOM SHEET: CONTEXTO DO PACIENTE, ESPÉCIE & PESO                      -->
+<!-- ======================================================================= -->
+<div id="sheet-paciente" class="vc-overlay hidden" onclick="if(event.target===this)fecharSheetPaciente()">
+  <div class="vc-sheet p-4 sm:p-5 space-y-4">
+    <div class="vc-sheet-handle"></div>
+    <div class="flex items-center justify-between pb-2.5 border-b vc-divider">
+      <div>
+        <h3 class="text-sm font-bold vc-text">Paciente, Táxon &amp; Peso</h3>
+        <p class="text-[11px] vc-muted">Alterar aqui recalcula todas as abas instantaneamente.</p>
+      </div>
+      <button type="button" onclick="fecharSheetPaciente()" class="vc-btn vc-btn-ghost !px-2.5 !py-1">Fechar</button>
+    </div>
+
+    <div class="space-y-3">
+      <div>
+        <label class="vc-field-label">Prontuários Salvos</label>
+        <select id="sel-pacientes-salvos" onchange="carregarPacienteSalvo(this.value)" class="vc-select">
+          <option value="">Pacientes (0)</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div>
+          <label class="vc-field-label">Grupo Taxonômico</label>
+          <select id="g-tax" onchange="trocarGrupoTaxonomico()" class="vc-select font-semibold"></select>
+        </div>
+        <div>
+          <label class="vc-field-label">Subespécie / Perfil</label>
+          <select id="g-subesp" onchange="trocarSubespecie()" class="vc-select"></select>
+        </div>
+      </div>
+
+      <div>
+        <label class="vc-field-label">Peso Corporal</label>
+        <div class="flex items-center gap-2">
+          <input id="g-peso" type="number" step="any" value="4.0" oninput="atualizarPesoGlobal()" class="vc-input mono text-base font-bold flex-1" placeholder="0.0">
+          <div class="vc-segmented !p-1 shrink-0 w-28">
+            <button id="btn-u-g" type="button" onclick="setUnidade('g')" class="vc-seg-btn !py-1.5">g</button>
+            <button id="btn-u-kg" type="button" onclick="setUnidade('kg')" class="vc-seg-btn active !py-1.5">kg</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button type="button" onclick="salvarPacienteAtual();fecharSheetPaciente()" class="vc-btn vc-btn-primary py-2.5">Salvar Prontuário</button>
+        <button type="button" onclick="novoPacienteLimpo();fecharSheetPaciente()" class="vc-btn vc-btn-secondary py-2.5">Novo Paciente</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- COMMAND BAR: BUSCA GLOBAL UNIFICADA                                     -->
+<!-- ======================================================================= -->
+<div id="modal-busca-global" class="vc-overlay hidden" onclick="if(event.target===this)fecharBuscaGlobal()">
+  <div class="vc-sheet p-4 sm:p-5 space-y-3">
+    <div class="vc-sheet-handle"></div>
+    <div class="flex items-center gap-2">
+      <input id="input-busca-global" type="text" oninput="executarBuscaGlobal()" placeholder="Buscar fármaco, espécie, escala, UI, CRI ou emergência..." class="vc-input flex-1">
+      <button type="button" onclick="fecharBuscaGlobal()" class="vc-btn vc-btn-secondary shrink-0">Fechar</button>
+    </div>
+    <div id="resultados-busca-global" class="space-y-1.5 max-h-[60vh] overflow-y-auto"></div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- BOTTOM SHEET MULTIFUNCIONAL (FÁRMACO RÁPIDO & GUIAS SEMIOLÓGICOS)       -->
+<!-- ======================================================================= -->
+<div id="modal-core" class="vc-overlay hidden" onclick="if(event.target===this)fecharModal()">
+  <div class="vc-sheet p-4 sm:p-5 space-y-3.5">
+    <div class="vc-sheet-handle"></div>
+    <div class="flex items-center justify-between gap-2 pb-2.5 border-b vc-divider">
+      <h3 id="modal-titulo" class="text-sm sm:text-base font-bold vc-text leading-snug"></h3>
+      <button type="button" onclick="fecharModal()" class="vc-btn vc-btn-secondary !py-1 !px-2.5 shrink-0">Fechar</button>
     </div>
     <div id="modal-corpo" class="space-y-3 text-xs leading-relaxed"></div>
   </div>
 </div>
 
-<!-- MODAL OFICIAL DE CONTA VETCORE (E-MAIL E SENHA — WEB & APK) -->
-<div id="modal-admin" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-  <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl text-center">
-    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-      <span class="text-sm font-bold text-white">Conta VetCore</span>
-      <button onclick="document.getElementById('modal-admin').classList.add('hidden')" class="text-xs text-slate-400 hover:text-white">✕</button>
+<!-- ======================================================================= -->
+<!-- MODAL DE CONTA (E-MAIL / SENHA + BACKUP JSON + TEMA)                    -->
+<!-- ======================================================================= -->
+<div id="modal-admin" class="vc-overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="vc-sheet !max-w-sm p-5 space-y-4">
+    <div class="vc-sheet-handle"></div>
+    <div class="flex justify-between items-center pb-2.5 border-b vc-divider">
+      <span class="text-sm font-bold vc-text">Conta &amp; Sincronização</span>
+      <button type="button" onclick="document.getElementById('modal-admin').classList.add('hidden')" class="vc-btn vc-btn-ghost !py-1 !px-2">Fechar</button>
     </div>
 
-    <!-- Estado 1: Deslogado -->
-    <div id="view-login-deslogado" class="space-y-3.5 py-1">
-      <div class="space-y-1">
-        <h4 class="text-sm font-bold text-white">Sincronização na Nuvem</h4>
-        <p class="text-xs text-slate-400 leading-relaxed">Use o mesmo e-mail e senha no celular e no computador para sincronizar prontuários, receitas e dados do emitente.</p>
-      </div>
-
-      <div class="space-y-2 text-left">
-        <input id="auth-email" type="email" autocomplete="email" placeholder="Seu e-mail" class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none">
-        <input id="auth-senha" type="password" autocomplete="current-password" placeholder="Sua senha (mín. 6 caracteres)" class="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white outline-none">
-        <div id="auth-erro" class="hidden text-[11px] text-rose-400 font-medium px-1"></div>
+    <div id="view-login-deslogado" class="space-y-3">
+      <p class="text-xs vc-secondary leading-relaxed">Use o mesmo e-mail e senha no celular e no PC para sincronizar prontuários, receitas e dados do emitente.</p>
+      <div class="space-y-2">
+        <input id="auth-email" type="email" autocomplete="email" placeholder="Seu e-mail" class="vc-input">
+        <input id="auth-senha" type="password" autocomplete="current-password" placeholder="Sua senha (mín. 6 caracteres)" class="vc-input">
+        <div id="auth-erro" class="hidden text-[11px] vc-danger-text font-semibold"></div>
         <div class="grid grid-cols-2 gap-2 pt-1">
-          <button type="button" onclick="entrarComEmailSenha()" class="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition">Entrar</button>
-          <button type="button" onclick="criarContaEmailSenha()" class="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs transition">Criar Conta</button>
+          <button type="button" onclick="entrarComEmailSenha()" class="vc-btn vc-btn-primary py-2.5">Entrar</button>
+          <button type="button" onclick="criarContaEmailSenha()" class="vc-btn vc-btn-secondary py-2.5">Criar Conta</button>
         </div>
-        <button type="button" onclick="recuperarSenhaEmail()" class="w-full text-center text-[11px] text-slate-400 hover:text-emerald-400 pt-1">Esqueci minha senha</button>
+        <button type="button" onclick="recuperarSenhaEmail()" class="w-full text-center text-[11px] vc-muted hover:underline pt-1">Esqueci minha senha</button>
       </div>
     </div>
 
-    <!-- Estado 2: Logado -->
-    <div id="view-login-logado" class="hidden space-y-4 py-2">
-      <img id="usr-foto" src="icon.png" alt="VetCore" class="w-14 h-14 rounded-full mx-auto border-2 border-emerald-500 object-cover">
-      <div>
-        <div id="usr-nome" class="text-sm font-bold text-white"></div>
-        <div id="usr-email" class="text-xs text-slate-400"></div>
-        <div class="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[11px] font-semibold text-emerald-300">
-          <span>🟢 Sincronização Automática Ativa</span>
-        </div>
+    <div id="view-login-logado" class="hidden space-y-3 text-center py-1">
+      <div class="w-12 h-12 rounded-2xl mx-auto overflow-hidden border" style="border-color:var(--accent-border)">
+        <img id="usr-foto" src="icon.png" alt="VetCore" class="w-full h-full object-cover">
       </div>
-      <button type="button" onclick="logoutContaGoogle()" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border border-slate-700 text-xs font-semibold transition">
-        Sair da Conta
-      </button>
+      <div>
+        <div id="usr-nome" class="text-sm font-bold vc-text"></div>
+        <div id="usr-email" class="text-xs vc-secondary"></div>
+        <div class="mt-2"><span class="vc-badge vc-badge-ok">Sincronização na nuvem ativa</span></div>
+      </div>
+      <button type="button" onclick="logoutContaGoogle()" class="vc-btn vc-btn-danger w-full py-2">Sair da Conta</button>
+    </div>
+
+    <div class="pt-3 border-t vc-divider space-y-2">
+      <span class="vc-section-label block">Backup Local (JSON)</span>
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" onclick="exportarBackupVetCore()" class="vc-btn vc-btn-secondary">Exportar</button>
+        <label class="vc-btn vc-btn-secondary cursor-pointer">
+          Importar
+          <input type="file" accept=".json" onchange="importarBackupVetCore(event)" class="hidden">
+        </label>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- BARRA DE NAVEGAÇÃO INFERIOR DE 5 ABAS -->
-<nav class="fixed bottom-0 inset-x-0 z-40 glass-nav border-t border-slate-800/90 grid grid-cols-5 h-14 max-w-6xl mx-auto">
-  <button class="nav-btn flex flex-col items-center justify-center text-[10px] sm:text-[11px] font-semibold text-emerald-400" data-target="prontuario" onclick="mudarAba('prontuario')"><span class="text-base">📋</span><span>Prontuário</span></button>
-  <button class="nav-btn flex flex-col items-center justify-center text-[10px] sm:text-[11px] font-semibold text-slate-400" data-target="receitas" onclick="mudarAba('receitas')"><span class="text-base">📝</span><span>Receitas</span></button>
-  <button class="nav-btn flex flex-col items-center justify-center text-[10px] sm:text-[11px] font-semibold text-slate-400" data-target="calc" onclick="mudarAba('calc')"><span class="text-base">🧮</span><span>Cálculos</span></button>
-  <button class="nav-btn flex flex-col items-center justify-center text-[10px] sm:text-[11px] font-semibold text-slate-400" data-target="emergencia" onclick="mudarAba('emergencia')"><span class="text-base">🚨</span><span>Emergência</span></button>
-  <button class="nav-btn flex flex-col items-center justify-center text-[10px] sm:text-[11px] font-semibold text-slate-400" data-target="fontes" onclick="mudarAba('fontes')"><span class="text-base">📚</span><span>Bulário & Livros</span></button>
+<!-- CONTAINER DE TOASTS NATIVOS -->
+<div id="vc-toast-container" aria-live="polite"></div>
+
+<!-- ======================================================================= -->
+<!-- NAVEGAÇÃO INFERIOR (5 ABAS COM ÍCONES VETORIAIS TRAÇO FINO)             -->
+<!-- ======================================================================= -->
+<nav class="fixed bottom-0 inset-x-0 z-40 vc-glass vc-bottom-nav">
+  <div class="max-w-6xl mx-auto grid grid-cols-5 h-14">
+    <button type="button" class="nav-btn active" data-target="prontuario" onclick="mudarAba('prontuario')">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14h6"/><path d="M9 10h6"/></svg>
+      <span>Prontuário</span>
+    </button>
+    <button type="button" class="nav-btn" data-target="receitas" onclick="mudarAba('receitas')">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+      <span>Receitas</span>
+    </button>
+    <button type="button" class="nav-btn" data-target="calc" onclick="mudarAba('calc')">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
+      <span>Cálculos</span>
+    </button>
+    <button type="button" class="nav-btn" data-target="emergencia" onclick="mudarAba('emergencia')">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/></svg>
+      <span>Emergência</span>
+    </button>
+    <button type="button" class="nav-btn" data-target="fontes" onclick="mudarAba('fontes')">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      <span>Bulário</span>
+    </button>
+  </div>
 </nav>
 
+<!-- Scripts carregados uma única vez (sem duplicação) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="database.js"></script>
-<script src="app.js"></script>
+<script src="./database.js"></script>
+<script src="./app.js"></script>
 <script>
   initVetCore();
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js");
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
-  // Carrega o Firebase após 2.5s para não causar timeout no scanner do PWABuilder
-  window.addEventListener("load", () => {
-    setTimeout(() => {
-      const s1 = document.createElement("script");
-      s1.src = "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js";
-      s1.onload = () => {
-        const s2 = document.createElement("script");
-        s2.src = "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js";
-        const s3 = document.createElement("script");
-        s3.src = "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js";
-        s3.onload = () => {
-          if (typeof firebase !== "undefined" && VETCORE_CLOUD_CONFIG.firebaseConfig.apiKey) {
-            if (!firebase.apps.length) firebase.initializeApp(VETCORE_CLOUD_CONFIG.firebaseConfig);
-            firestoreDb = firebase.firestore();
-            firebase.auth().onAuthStateChanged(async (user) => {
-              firebaseUserAtual = user || null;
-              atualizarUIContaGoogle(firebaseUserAtual);
-              if (user) await baixarDadosDaNuvemGoogle(user.uid);
-            });
-          }
-        };
-        document.body.appendChild(s2);
-        document.body.appendChild(s3);
-      };
-      document.body.appendChild(s1);
-    }, 2500);
-  });
 </script>
 </body>
 </html>

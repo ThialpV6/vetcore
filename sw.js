@@ -1,7 +1,8 @@
-const CACHE_NAME = "vetcore-pro-v3";
+const CACHE_NAME = "vetcore-pro-v4";
 const ASSETS = [
   "./",
   "./index.html",
+  "./style.css",
   "./database.js",
   "./app.js",
   "./manifest.json",
@@ -26,7 +27,6 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   const url = e.request.url;
-  // Nunca interceptar chamadas dinâmicas da IA (Cloudflare Worker), Firebase ou Google Drive
   if (
     e.request.method !== "GET" ||
     url.includes("workers.dev") ||
