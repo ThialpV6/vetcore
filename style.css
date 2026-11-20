@@ -608,3 +608,30 @@ details > summary::-webkit-details-marker {
     box-shadow: none !important;
   }
 }
+
+/* Performance: skip off-screen layout/paint for long clinical lists */
+.vc-perf-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 74px;
+}
+
+/* Subtle Auto-Save Status Indicator */
+.vc-autosave-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.vc-autosave-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background-color: var(--ok);
+  flex-shrink: 0;
+}
+.vc-autosave-dot.saving {
+  background-color: var(--warn);
+}

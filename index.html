@@ -93,7 +93,10 @@
         <!-- Identificação do Paciente -->
         <div class="lg:col-span-7 vc-card p-4 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b vc-divider">
-            <span class="vc-section-label">Identificação do Paciente &amp; Origem</span>
+            <div class="flex items-center gap-2">
+              <span class="vc-section-label">Identificação do Paciente &amp; Origem</span>
+              <span id="status-autosave-pront" class="vc-autosave-status hidden"><span class="vc-autosave-dot"></span><span>Salvo</span></span>
+            </div>
             <select id="p-status" class="vc-select !w-auto !py-1 !px-2.5 !text-xs font-semibold">
               <option value="Internado">Animal Internado</option>
               <option value="Ambulatorial">Atendimento Ambulatorial</option>
@@ -539,7 +542,10 @@
       <div class="lg:col-span-7">
         <div class="vc-card p-4 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b vc-divider">
-            <span class="vc-section-label">Pré-visualização Editável</span>
+            <div class="flex items-center gap-2">
+              <span class="vc-section-label">Pré-visualização Editável</span>
+              <span id="status-autosave-rec" class="vc-autosave-status hidden"><span class="vc-autosave-dot"></span><span>Salvo</span></span>
+            </div>
             <div class="flex flex-wrap gap-1.5">
               <button type="button" onclick="salvarReceitaNoProntuario()" class="vc-btn vc-btn-primary !py-1.5 !px-3">Salvar</button>
               <button type="button" onclick="compartilharReceitaWhatsApp()" class="vc-btn vc-btn-soft !py-1.5 !px-3">WhatsApp</button>
@@ -847,16 +853,20 @@
 
     <div id="view-login-deslogado" class="space-y-3">
       <p class="text-xs vc-secondary leading-relaxed">Use o mesmo e-mail e senha no celular e no PC para sincronizar prontuários, receitas e dados do emitente.</p>
-      <div class="space-y-2">
-        <input id="auth-email" type="email" autocomplete="email" placeholder="Seu e-mail" class="vc-input">
-        <input id="auth-senha" type="password" autocomplete="current-password" placeholder="Sua senha (mín. 6 caracteres)" class="vc-input">
+      <form id="form-auth-vetcore" autocomplete="on" onsubmit="event.preventDefault();entrarComEmailSenha();" class="space-y-2.5">
+        <input id="auth-email" name="email" type="email" autocomplete="username" placeholder="Seu e-mail" class="vc-input" required>
+        <input id="auth-senha" name="password" type="password" autocomplete="current-password" placeholder="Sua senha (mín. 6 caracteres)" class="vc-input" required>
+        <label class="flex items-center gap-2 text-xs vc-secondary cursor-pointer select-none pt-0.5">
+          <input id="auth-manter" type="checkbox" checked class="w-3.5 h-3.5 rounded accent-teal-500">
+          <span>Manter conectado neste dispositivo</span>
+        </label>
         <div id="auth-erro" class="hidden text-[11px] vc-danger-text font-semibold"></div>
         <div class="grid grid-cols-2 gap-2 pt-1">
-          <button type="button" onclick="entrarComEmailSenha()" class="vc-btn vc-btn-primary py-2.5">Entrar</button>
+          <button type="submit" class="vc-btn vc-btn-primary py-2.5">Entrar</button>
           <button type="button" onclick="criarContaEmailSenha()" class="vc-btn vc-btn-secondary py-2.5">Criar Conta</button>
         </div>
         <button type="button" onclick="recuperarSenhaEmail()" class="w-full text-center text-[11px] vc-muted hover:underline pt-1">Esqueci minha senha</button>
-      </div>
+      </form>
     </div>
 
     <div id="view-login-logado" class="hidden space-y-3 text-center py-1">
@@ -915,14 +925,17 @@
   </div>
 </nav>
 
-<!-- Scripts carregados uma única vez (sem duplicação) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<!-- Carregamento local imediato + Firebase em paralelo (zero bloqueio offline) -->
 <script src="./database.js"></script>
 <script src="./app.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onload="initFirebaseVetCore()"></script>
 <script>
   initVetCore();
+  window.addEventListener("load", () => {
+    if (typeof initFirebaseVetCore === "function") initFirebaseVetCore();
+  });
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }

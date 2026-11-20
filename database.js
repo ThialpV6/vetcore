@@ -1572,3 +1572,701 @@ FARMACOS_DB.push(
     }
   }
 );
+// ============================================================================
+// EXPANSÃO TAXONÔMICA COMPLETA v1.6 (BLOCOS A + B + C — 38 GRUPOS TAXONÔMICOS)
+// Doses sincronizadas por ID nominal (dosesPorId) + vetor dosesPadrao (38)
+// ============================================================================
+
+// 1. Guia Semiológico Dedicado para Anfíbios (Cubas Cap. 12 / Carpenter 6ª ed.)
+GUIAS_SEMIOLOGICOS.padraoAnfibios = {
+  desid: [
+    ["5% (Leve)", "Pele discretamente menos brilhante ou pegajosa; retração discreta dos globos oculares; animal busca insistentemente fonte hídrica."],
+    ["8% a 10% (Moderada a Grave)", "Pele seca/opaca ou enrugada na região inguinal e dorso, olhos afundados, muco espesso, perda aguda de peso (> 10%) e letargia — iniciar banho raso imediato com água declorada/Ringer de anfíbio!"]
+  ],
+  ecc: [
+    ["Caquético / Emaciado", "Ossos pélvicos (ílio), urostilo e coluna vertebral muito proeminentes; coxas afiladas sem massa muscular."],
+    ["Magro", "Contornos pélvicos facilmente visíveis com reserva celômica reduzida."],
+    ["Ideal", "Abdome/celoma levemente arredondado, coxas musculosas e proeminências pélvicas discretas."],
+    ["Obeso / Atenção à Hidropsia", "Distensão abdominal acentuada: diferenciar gordura de edema linfático/ascite (Síndrome da Perna Vermelha / insuficiência renal!)."]
+  ]
+};
+
+// 2. Refinamento dos Grupos Existentes (Bloco B — Subespécies + Separação Canídeos / Serpentes)
+(function refinarGruposBase() {
+  const byId = id => TAXONS_DB.find(t => t.id === id);
+
+  // 2a. Canídeos Silvestres (mantém id "CarnivorosSilv" no índice 17 p/ compatibilidade total)
+  const can = byId("CarnivorosSilv");
+  if (can) {
+    can.grupo = "Carnívoros — Canidae Silvestre";
+    can.nome = "🦊 Canídeos Silvestres (Cachorro-do-mato, Lobo-guará, Raposa)";
+    can.proibido = "⛔ Corticoides no TCE! AINEs bloqueados em choque/desidratação/doença renal. Alto risco biológico de Raiva (EPI completo!).";
+    can.regraOuro = "Canídeos silvestres seguem farmacologia próxima à canina. No TCE por atropelamento em Cerdocyon thous: cabeceira a 30°, Manitol 20% (500 mg/kg IV lento) ou Salina 7,5% e Metadona + Midazolam. Em Lobo-guará: rastrear cistinúria e Dioctophyma renale!";
+    can.subespecies = [
+      { nome: "Cachorro-do-mato / Graxaim (Cerdocyon thous — 5 a 8 kg)", peso: 6.0, unid: "kg", alerta: "Canídeo silvestre neotropical: posologia próxima à canina; atenção a TCE por atropelamento e cinomose." },
+      { nome: "Lobo-guará (Chrysocyon brachyurus — 20 a 26 kg)", peso: 23.0, unid: "kg", alerta: "🚨 LOBO-GUARÁ (Cubas Cap. 36): Altíssima incidência de cistinúria/urolitíase e parasitismo renal por Dioctophyma renale! Realizar urinálise e US renal; evitar excesso de proteína animal." },
+      { nome: "Raposa-do-campo (Lycalopex vetulus — 3 a 4.5 kg)", peso: 3.8, unid: "kg", alerta: "Pequeno canídeo de Cerrado; monitorar termorregulação e risco de cinomose." },
+      { nome: "Cachorro-vinagre (Speothos venaticus — 5 a 7 kg)", peso: 6.0, unid: "kg", alerta: "Hábito semiaquático e social; mordida potente." }
+    ];
+  }
+
+  // 2b. Caviomorfos: adicionar Paca e Cutia (Cubas Cap. 54)
+  const cav = byId("Caviomorfos");
+  if (cav) {
+    cav.nome = "🐹 Caviomorfos (Cobaia, Chinchila, Ouriço, Capivara, Paca, Cutia)";
+    cav.subespecies.push(
+      { nome: "Paca (Cuniculus paca — 6 a 10 kg)", peso: 8.0, unid: "kg", alerta: "Roedor caviomorfo de pele fina e mordida muito forte: proibido beta-lactâmicos/lincosamidas VO; contenção com puçá/caixa antes de IM." },
+      { nome: "Cutia (Dasyprocta azarae — 2.0 a 3.5 kg)", peso: 2.8, unid: "kg", alerta: "Roedor caviomorfo extremamente ágil e suscetível a estresse/miopatia de captura; evitar beta-lactâmicos VO." }
+    );
+  }
+
+  // 2c. Pernaltas: adicionar Seriema, Tuiuiú e Guará (Cubas Cap. 24)
+  const per = byId("Pernaltas");
+  if (per) {
+    per.nome = "🦩 Pernaltas & Aquáticas (Garça, Socó, Curicaca, Seriema, Tuiuiú, Atobá)";
+    per.subespecies.push(
+      { nome: "Seriema (Cariama cristata — 1.2 a 1.8 kg)", peso: 1.5, unid: "kg", alerta: "Cariamiformes: ave corredora de membros longos — risco elevado de miopatia de captura e fratura de tibiotarso; bico cortante." },
+      { nome: "Tuiuiú / Jaburu (Jabiru mycteria — 6 a 8 kg)", peso: 7.0, unid: "kg", alerta: "🚨 RISCO OCULAR GRAVE: Bico em lança de grande alcance — imobilizar cabeça/bico antes de abrir a caixa e usar EPI ocular." },
+      { nome: "Guará / Íbis (Eudocimus ruber — 600 a 900 g)", peso: 750, unid: "g", alerta: "Manter proteção do bico curvo longo; prevenir miopatia de captura." }
+    );
+  }
+
+  // 2d. Primatas: adicionar Macaco-aranha e Muriqui (Cubas Cap. 34)
+  const pri = byId("Primatas");
+  if (pri) {
+    pri.nome = "🐒 Primatas Neotropicais (Sagui, Macaco-prego, Bugio, Muriqui)";
+    pri.subespecies.push(
+      { nome: "Macaco-aranha / Muriqui (Ateles / Brachyteles — 7 a 12 kg)", peso: 9.0, unid: "kg", alerta: "Atelidae: grandes primatas arborícolas de cauda preênsil; alto risco de trauma por queda durante dardo/contenção em recinto alto." }
+    );
+  }
+
+  // 2e. Serpentes: dedicar exclusivamente a Ophidia (Lagartos agora tem grupo próprio!)
+  const ser = byId("Serpentes");
+  if (ser) {
+    ser.grupo = "Répteis — Squamata (Ophidia)";
+    ser.nome = "🐍 Serpentes (Jiboia, Arco-íris, Corn Snake, Peçonhentas)";
+    ser.subespecies = [
+      { nome: "Jiboia / Arco-íris-da-Caatinga (Boa constrictor / Epicrates cenchria)", peso: 1.5, unid: "kg", alerta: "Boidae: aplicar injetáveis na musculatura epaxial da metade cranial; monitorar estomatite e pneumonia." },
+      { nome: "Corn Snake / Píton-bola (Pantherophis / Python regius)", peso: 600, unid: "g", alerta: "Colubridae/Pythonidae pet: manter POTZ 27–31 °C e investigar retenção de muda (disecdise) e criptosporidiose." },
+      { nome: "Jararaca / Cascavel (Bothrops / Crotalus — Peçonhenta)", peso: 1.0, unid: "kg", alerta: "🚨 SERPENTE PEÇONHENTA: Contenção EXCLUSIVA com gancho herpetológico + tubo acrílico transparente (nunca contenção manual livre!); soro antiofídico mapeado no protocolo de segurança." }
+    ];
+  }
+})();
+
+// 3. Novos 17 Grupos Taxonômicos (Índices 21 a 37 — SEMPRE ao final!)
+TAXONS_DB.push(
+  // 21: FelideosSilv
+  {
+    id: "FelideosSilv", grupo: "Carnívoros — Felidae Silvestre", nome: "🐆 Felídeos Silvestres (Onça, Suçuarana, Jaguatirica, Gato-do-mato)",
+    tMin: 37.8, tBasalMin: 38.0, tMax: 39.2, fluidoManut: 45, bolusChoque: 8, fatorK: 70, gavMax: 25,
+    tuboSangue: "Tubo EDTA + Vermelha/Amarela (Cefálica, Safena Medial ou Jugular sob contenção química)",
+    vias: "IV (cefálica, safena medial, jugular), IM (dardo/zarabatana ou manual sob contenção), SC, VO",
+    proibido: "⛔ MESMAS RESTRIÇÕES DO GATO DOMÉSTICO (Deficiência de UGT1A6 e ABCG2): PROIBIDO Paracetamol, Carprofeno repetido, Lidocaína IV contínua (FLK) e corticoides no TCE! ⚠️ ENROFLOXACINA: risco de cegueira retiniana irreversível (máx 5 mg/kg SID — preferir Marbofloxacina!).",
+    regraOuro: "Contenção química obrigatória (West 3ª ed. / Cubas Cap. 37). Em felinos silvestres debilitados ou em choque, respeitar a tríade do choque felino (aquecer a >= 37 °C antes de expandir volemia rápida) e usar apenas FK/MK na analgesia contínua.",
+    subespecies: [
+      { nome: "Gato-do-mato / Jaguarundi (Leopardus guttulus / Herpailurus — 2.5 a 5 kg)", peso: 3.5, unid: "kg", alerta: "🚨 FELÍDEO SILVESTRE: Proibido Paracetamol, Carprofeno e Lidocaína IV contínua; preferir Marbofloxacina à Enrofloxacina!" },
+      { nome: "Jaguatirica (Leopardus pardalis — 8 a 15 kg)", peso: 11.0, unid: "kg", alerta: "Atenção à sedação balanceada com Midazolam + Opioide + Cetamina/Alfa-2 (West 3ª ed.)." },
+      { nome: "Suçuarana / Onça-parda (Puma concolor — 30 a 65 kg)", peso: 45.0, unid: "kg", alerta: "Grande felino: dardo IM na coxa; monitorar oxigenação (SpO2) e hipertermia durante contenção." },
+      { nome: "Onça-pintada (Panthera onca — 50 a 110 kg)", peso: 75.0, unid: "kg", alerta: "🚨 ALTO RISCO BIOLÓGICO/FÍSICO: Contenção química estrita (West 3ª ed.); monitorar bradicardia com alfa-2 agonistas e manter antagonista pronto." }
+    ],
+    sedacao: [
+      { nome: "Contenção Química Balanceada (Pequenos/Médios Felídeos)", drogas: [["Cetamina", 5.0], ["Midazolam", 0.3], ["Butorfanol", 0.2]], via: "IM (dardo ou gaiola de contenção)", obs: "Cubas Cap. 37 / West 3ª ed. Pode associar Dexmedetomidina (10–20 µg/kg IM) se hígido." },
+      { nome: "Sedação Analgésica Segura (Debilitados / TCE)", drogas: [["Butorfanol", 0.3], ["Midazolam", 0.3]], via: "IM ou IV", obs: "Mínima depressão cardiovascular; segura em trauma craniano." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (8 mg/kg) + Midazolam (0.4 mg/kg) + Metadona/Butorfanol (0.3 mg/kg) IM", 8, 100, 0.4, 5],
+      etapa2: ["Propofol (8 mg/kg IV) até apneia e perda total do reflexo corneal", 8, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV) EXCLUSIVAMENTE após plano anestésico profundo!", 1.0]
+    }
+  },
+  // 22: Mustelideos
+  {
+    id: "Mustelideos", grupo: "Carnívoros — Mustelidae", nome: "🦦 Mustelídeos & Ferrets (Furão, Irara, Lontra, Ariranha)",
+    tMin: 37.8, tBasalMin: 38.0, tMax: 39.5, fluidoManut: 60, bolusChoque: 10, fatorK: 70, gavMax: 25,
+    tuboSangue: "Microtubo EDTA + Heparina (Veia Cava Cranial em Ferrets sob sedação, Jugular ou Safena)",
+    vias: "IV (cefálica, safena lateral, jugular), IO (fêmur/tíbia em pequenos), SC (pele dorsal espessa), IM, VO",
+    proibido: "⛔ EM FERRETS: PROIBIDO jejum > 3 a 4 horas (risco de crise hipoglicêmica letal por insulinoma!). Alta susceptibilidade a Cinomose Canina (100% fatal!) e Influenza humana (usar máscara se gripado!).",
+    regraOuro: "Em Ferrets (BSAVA Rodents & Ferrets / Cubas Cap. 39): aferir sempre a glicemia na chegada (< 70 mg/dL sugere insulinoma) e lembrar que Creatinina > 1,0 mg/dL já indica azotemia! Em Lontras/Ariranhas: risco elevado de hipertermia fora d'água sob sedação.",
+    subespecies: [
+      { nome: "Furão / Ferret (Mustela putorius furo — 700 g a 1.5 kg)", peso: 1.0, unid: "kg", alerta: "🚨 FERRET: Jejum máximo 3–4h! Aferir glicemia (< 70 mg/dL = insulinoma) e checar alopecia simétrica/aumento vulvar (doença adrenal)." },
+      { nome: "Irara / Papa-mel (Eira barbara — 4 a 6.5 kg)", peso: 5.0, unid: "kg", alerta: "Mustelídeo ágil com mordida potente; contenção química IM antes do exame físico." },
+      { nome: "Lontra-neotropical (Lontra longicaudis — 6 a 12 kg)", peso: 8.5, unid: "kg", alerta: "Pelagem densa impermeável: monitorar temperatura retal de perto para evitar hipertermia na contenção!" },
+      { nome: "Ariranha (Pteronura brasiliensis — 22 a 32 kg)", peso: 26.0, unid: "kg", alerta: "Grande mustelídeo social de mordida extrema; acesso venoso jugular/femoral sob anestesia." }
+    ],
+    sedacao: [
+      { nome: "Sedação Segura p/ Exame, Coleta & RX (Ferrets / Mustelídeos)", drogas: [["Midazolam", 0.5], ["Butorfanol", 0.3]], via: "IM ou SC", obs: "BSAVA Manual of Rodents and Ferrets. Complementar com Isoflurano se necessário." },
+      { nome: "Contenção Química (Irara / Lontra / Ariranha)", drogas: [["Cetamina", 8.0], ["Midazolam", 0.4], ["Butorfanol", 0.2]], via: "IM", obs: "Cubas Cap. 38 / West 3ª ed." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (15 mg/kg) + Midazolam (0.5 mg/kg) IM", 15, 100, 0.5, 5],
+      etapa2: ["Propofol (8 mg/kg IV) até apneia e arreflexia corneal", 8, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV) após plano profundo.", 1.0]
+    }
+  },
+  // 23: Lagartos
+  {
+    id: "Lagartos", grupo: "Répteis — Squamata (Sauria)", nome: "🦎 Lagartos (Iguana-verde, Teiú, Pogona, Gecko-leopardo)",
+    tMin: 27.0, tBasalMin: 28.0, tMax: 34.0, fluidoManut: 20, bolusChoque: 5, fatorK: 10, gavMax: 15,
+    tuboSangue: "Microtubo com Heparina de Lítio (Veia Coccígea Ventral — abordagem ventral ou lateral)",
+    vias: "IM e SC EXCLUSIVAMENTE nos MEMBROS ANTERIORES (evitar sistema porta-renal caudal), IV (coccígea ventral, cefálica), IO (úmero/tíbia), VO",
+    proibido: "⛔ NUNCA segurar pela cauda (autotomia caudal!). Proibido corticoides sistêmicos de rotina e Pentabiótico. Evitar Ivermectina em camaleões e filhotes (preferir Fenbendazol).",
+    regraOuro: "Manter estritamente na POTZ (28–34 °C) durante qualquer tratamento! Em Iguanas e Pogonas: investigar sempre Doença Osteometabólica (DOM / deficiência de UVB e Ca:P) e retenção folicular/estase pré-ovulatória. Em Teiús: atenção à mordida e chicoteada caudal.",
+    subespecies: [
+      { nome: "Iguana-verde (Iguana iguana — 1.0 a 4.0 kg)", peso: 2.0, unid: "kg", alerta: "Herbívoro estrito (excesso de proteína animal causa doença renal e gota úrica!). Avaliar UVB e cálcio na DOM." },
+      { nome: "Teiú (Salvator merianae — 1.5 a 4.5 kg)", peso: 2.5, unid: "kg", alerta: "Onívoro de mordida e cauda potentes; brumação fisiológica no inverno reduz metabolismo." },
+      { nome: "Dragão-barbudo / Pogona (Pogona vitticeps — 300 a 550 g)", peso: 420, unid: "g", alerta: "Investigar impacção GI por areia, lipidose hepática e adenovírus." },
+      { nome: "Gecko-leopardo (Eublepharis macularius — 50 a 90 g)", peso: 65, unid: "g", alerta: "Microfauna: usar Diluição 1:10/1:100; atenção à cauda gorda (autotomia!) e criptosporidiose." }
+    ],
+    sedacao: [
+      { nome: "Contenção / Procedimentos Clínicos & Radiografia", drogas: [["Cetamina", 15.0], ["Midazolam", 1.5]], via: "IM nos membros anteriores", obs: "Associar Tramadol (5–10 mg/kg) em fraturas ou procedimentos dolorosos (Carpenter 6ª ed.)." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (30 mg/kg) + Midazolam (2 mg/kg) IM nos membros anteriores", 30, 100, 2.0, 5],
+      etapa2: ["Propofol (10 mg/kg IV na veia coccígea ventral ou IO) até perda de reflexos", 10, 10],
+      etapa3: ["KCl 19,1% (1.5 mL/kg IV/IC) após anestesia profunda.", 1.5]
+    }
+  },
+  // 24: Crocodilianos
+  {
+    id: "Crocodilianos", grupo: "Répteis — Crocodylia", nome: "🐊 Crocodilianos (Jacaré-de-papo-amarelo, Tinga, Pantanal)",
+    tMin: 28.0, tBasalMin: 28.0, tMax: 32.0, fluidoManut: 15, bolusChoque: 5, fatorK: 10, gavMax: 15,
+    tuboSangue: "⚠️ OBRIGATÓRIO HEPARINA DE LÍTIO (EDTA lisa hemácias!). Coleta: Seio Venoso Occipital (Supravertebral) ou Coccígea Ventral.",
+    vias: "IM (membros anteriores entre escamas laterais ou base lateral cranial da cauda — evitar osteodermos dorsais!), IV (seio occipital / coccígea ventral), SC, VO",
+    proibido: "⛔ PROIBIDO IVERMECTINA EM CROCODILIANOS (neurotoxicidade e paresia relatadas — Carpenter 6ª ed., p. 117!). Proibido corticoides, Pentabiótico e contenção sem imobilização prévia da mandíbula e proteção da cauda!",
+    regraOuro: "Contenção física: imobilizar a mandíbula com fita resistente (deixando narinas livres!), vendar os olhos (reflexo vasovagal reduz estresse) e conter a cauda. Manter na POTZ (28–32 °C). Antibiótico injetável de 1ª linha: Ceftazidima (20 mg/kg IM q72h).",
+    subespecies: [
+      { nome: "Jacaré-de-papo-amarelo (Caiman latirostris — 8 a 40 kg)", peso: 18.0, unid: "kg", alerta: "Espécie frequente em resgates no Sudeste/Sul; atenção à hipotermia no inverno e lesões por arpão/anzol." },
+      { nome: "Jacaré-tinga (Caiman crocodilus — 6 a 30 kg)", peso: 15.0, unid: "kg", alerta: "" },
+      { nome: "Jacaré-do-pantanal (Caiman yacare — 10 a 45 kg)", peso: 20.0, unid: "kg", alerta: "" },
+      { nome: "Filhote / Juvenil de Jacaré (< 2 kg)", peso: 800, unid: "g", alerta: "Atenção à hipoglicemia por estresse e doença osteometabólica (DOM) em recintos sem UVB." }
+    ],
+    sedacao: [
+      { nome: "Contenção Química Segura (Exame Oral / Retirada de Anzol / RX)", drogas: [["Cetamina", 15.0], ["Midazolam", 1.0]], via: "IM nos membros anteriores", obs: "West 3ª ed. / Cubas Cap. 13. Manter aquecido (28–30 °C) e fora da água até recuperação total!" }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (30 mg/kg) + Midazolam (2 mg/kg) IM nos membros anteriores", 30, 100, 2.0, 5],
+      etapa2: ["Propofol (10 mg/kg IV no seio venoso occipital) até arreflexia profunda", 10, 10],
+      etapa3: ["KCl 19,1% (1.5 mL/kg IV no seio occipital) após plano profundo.", 1.5]
+    }
+  },
+  // 25: Cervideos
+  {
+    id: "Cervideos", grupo: "Artiodactyla — Cervidae (Ruminantes)", nome: "🦌 Cervídeos (Veado-catingueiro, Mateiro, Cervo-do-pantanal, Gamo)",
+    tMin: 38.0, tBasalMin: 38.2, tMax: 39.5, fluidoManut: 45, bolusChoque: 15, fatorK: 70, gavMax: 20,
+    tuboSangue: "Tubo EDTA + Vermelha/Amarela (Veia Jugular Externa)",
+    vias: "IV (jugular, cefálica, safena), IM (glúteo/semimembranoso/pescoço — dardo ou manual), SC, VO (somente fármacos que preservem o rúmen!)",
+    proibido: "⛔ PROIBIDO antimicrobianos orais beta-lactâmicos/lincosamidas em adultos (Amoxi+Clav VO, Clindamicina, Cefalexina VO destroem microbiota ruminal!). ⛔ PROIBIDO decúbito lateral prolongado sem suporte (timpanismo ruminal + broncoaspiração letal!).",
+    regraOuro: "🚨 EMERGÊNCIA EM CERVÍDEOS (Cubas Cap. 51 / West 3ª ed.): 1) MIOPATIA DE CAPTURA (T > 40,5 °C = resfriamento imediato com água/álcool nas virilhas + O2 + fluido + Vitamina E/Selênio!); 2) Manter SEMPRE em DECÚBITO ESTERNAL com cabeça erguida e focinho inclinado para baixo; 3) Vendar os olhos e reduzir ruído ao mínimo.",
+    subespecies: [
+      { nome: "Veado-catingueiro (Subulo gouazoubira — 15 a 25 kg)", peso: 18.0, unid: "kg", alerta: "Extremamente suscetível à miopatia de captura e trauma cervical em cercas; manter venda ocular e silêncio absoluto!" },
+      { nome: "Veado-mateiro (Mazama americana — 25 a 45 kg)", peso: 32.0, unid: "kg", alerta: "Risco elevado de hipertermia e timpanismo ruminal durante contenção." },
+      { nome: "Cervo-do-pantanal (Blastocerus dichotomus — 80 a 130 kg)", peso: 100.0, unid: "kg", alerta: "Grande ruminante silvestre; monitorar SpO2, temperatura retal e decúbito esternal." },
+      { nome: "Gamo / Cervo-nobre (Dama dama / Cervus elaphus — 50 a 120 kg)", peso: 65.0, unid: "kg", alerta: "Cuidado com galhadas em machos no período reprodutivo (rut)." }
+    ],
+    sedacao: [
+      { nome: "Contenção Química Balanceada (Exame / Curativos / Transporte)", drogas: [["Cetamina", 5.0], ["Midazolam", 0.3], ["Butorfanol", 0.2]], via: "IM (dardo ou contenção)", obs: "Cubas Cap. 51 / West 3ª ed. Pode associar Xilazina/Dexmedetomidina se hígido (sempre ter Ioimbina/Atipamezol pronto!)." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (8 mg/kg) + Midazolam (0.4 mg/kg) IM", 8, 100, 0.4, 5],
+      etapa2: ["Propofol (6 mg/kg IV na jugular) até apneia e perda do reflexo corneal", 6, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV na jugular) EXCLUSIVAMENTE após inconsciência profunda!", 1.0]
+    }
+  },
+  // 26: Tapiridae
+  {
+    id: "Tapiridae", grupo: "Perissodactyla — Tapiridae", nome: "🦛 Antas (Tapirus terrestris)",
+    tMin: 36.2, tBasalMin: 36.5, tMax: 37.8, fluidoManut: 45, bolusChoque: 15, fatorK: 70, gavMax: 20,
+    tuboSangue: "Tubo EDTA + Vermelha/Amarela (Veia Cefálica, Safena Medial ou Marginal Auricular)",
+    vias: "IV (cefálica, safena medial, auricular — jugular muito profunda!), IM (agulha longa 40×12 no pescoço/glúteo — pele extremamente espessa!), SC, VO",
+    proibido: "⛔ PROIBIDO Clindamicina, Lincomicina e beta-lactâmicos orais (fermentador pós-gástrico semelhante a equinos — risco de colite clostridial letal!). Evitar superaquecimento (> 38,5 °C já é hipertermia em antas!).",
+    regraOuro: "Temperatura normal de Antas é mais baixa que outros ungulados (36,5–37,8 °C — Cubas Cap. 47). Fermentação cecocólica (extrapolar farmacologia segura de Equídeos: Meloxicam 0,6 mg/kg, SMZ+TMP VO, Pentabiótico IM profunda). Acalmam-se muito com coçagem dorsal/flanco!",
+    subespecies: [
+      { nome: "Anta-brasileira Adulta (Tapirus terrestris — 150 a 250 kg)", peso: 190.0, unid: "kg", alerta: "Pele dorsal/cervical espessa (agulha 40×12 p/ IM); atenção a prolapso retal e lesões podais." },
+      { nome: "Filhote / Juvenil de Anta (15 a 60 kg)", peso: 35.0, unid: "kg", alerta: "Atenção à hipoglicemia, diarreias neonatais e termorregulação." }
+    ],
+    sedacao: [
+      { nome: "Contenção Química / Sedação em Pé ou Decúbito", drogas: [["Butorfanol", 0.15], ["Midazolam", 0.2], ["Cetamina", 3.0]], via: "IM profunda (agulha longa)", obs: "West 3ª ed. / Cubas Cap. 47. Frequentemente combinada com Alfa-2 (Detomidina/Medetomidina) com reversão." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (5 mg/kg) + Midazolam (0.3 mg/kg) + Butorfanol (0.15 mg/kg) IM profunda", 5, 100, 0.3, 5],
+      etapa2: ["Propofol (5 mg/kg IV na cefálica/safena) até apneia e arreflexia", 5, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV) após plano profundo.", 1.0]
+    }
+  },
+  // 27: Ratitas
+  {
+    id: "Ratitas", grupo: "Aves — Rheiformes & Struthioniformes", nome: "🦤 Ratitas (Ema, Avestruz, Emu e Casuar)",
+    tMin: 38.5, tBasalMin: 39.0, tMax: 40.5, fluidoManut: 45, bolusChoque: 10, fatorK: 78, gavMax: 15,
+    tuboSangue: "Tubo Heparina de Lítio (Veia Jugular Direita, Basílica/Ulnar ou Metatarsal Medial)",
+    vias: "IM EXCLUSIVAMENTE na musculatura pélvica/coxa (ílio-tibial) — ⛔ NÃO POSSUEM QUILHA NEM MÚSCULO PEITORAL! IV (jugular direita, basílica, metatarsal), SC, VO",
+    proibido: "⛔ PROIBIDO tentar injeção IM peitoral (esterno plano sem músculo!). ⛔ PROIBIDO Corticoides (aspergilose!) e Pentabiótico. ⛔ NUNCA se posicionar à frente de Avestruz/Casuar (chute frontal letal!).",
+    regraOuro: "Cubas Cap. 18 / Carpenter 6ª ed.: Colocar capuz escuro na cabeça reduz drasticamente o estresse. Altíssimo risco de MIOPATIA DE CAPTURA (monitorar CK e temperatura) e impacção gástrica por corpos estranhos. Na anestesia, apoiar o pescoço longo para não obstruir traqueia.",
+    subespecies: [
+      { nome: "Ema (Rhea americana — 20 a 30 kg)", peso: 24.0, unid: "kg", alerta: "Risco elevado de miopatia de captura e fratura de tibiotarso; aplicar IM apenas na coxa." },
+      { nome: "Avestruz (Struthio camelus — 90 a 140 kg)", peso: 110.0, unid: "kg", alerta: "🚨 SEGURANÇA: Chute frontal potencialmente letal! Conter sempre lateralmente/por trás e encapuzar imediatamente." },
+      { nome: "Emu (Dromaius novaehollandiae — 30 a 45 kg)", peso: 36.0, unid: "kg", alerta: "Forte tendência a chutar para frente e para os lados; alto risco de hipertermia na contenção." },
+      { nome: "Casuar (Casuarius casuarius — 35 a 55 kg)", peso: 45.0, unid: "kg", alerta: "🚨 RISCO EXTREMO DE EQUIPE: Garra medial em adaga — manejo físico apenas com escudos rígidos ou dardo IM na coxa!" }
+    ],
+    sedacao: [
+      { nome: "Sedação / Contenção Química (IM na Coxa!)", drogas: [["Cetamina", 10.0], ["Midazolam", 0.5], ["Butorfanol", 0.5]], via: "IM (músculo ílio-tibial / coxa — NUNCA no peito!)", obs: "West 3ª ed. / Cubas Cap. 18. Encapuzar durante indução e recuperação para evitar traumas." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (15 mg/kg) + Midazolam (1 mg/kg) IM na musculatura da coxa", 15, 100, 1.0, 5],
+      etapa2: ["Propofol (8 mg/kg IV na jugular direita) até apneia e arreflexia", 8, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV) após plano profundo.", 1.0]
+    }
+  },
+  // 28: Anseriformes
+  {
+    id: "Anseriformes", grupo: "Aves — Anseriformes", nome: "🦆 Anseriformes (Pato, Marreco, Ganso e Cisne)",
+    tMin: 40.0, tBasalMin: 40.5, tMax: 42.0, fluidoManut: 55, bolusChoque: 10, fatorK: 78, gavMax: 20,
+    tuboSangue: "⚠️ Usar HEPARINA DE LÍTIO (EDTA causa hemólise em vários patos, gansos e cisnes! Coleta: Metatarsal Medial ou Jugular Direita).",
+    vias: "IV (metatarsal medial, basílica, jugular direita), IO (ulna distal/tibiotarso), IM (peitoral), SC, VO",
+    proibido: "⛔ Corticoides (Aspergilose!), Pentabiótico, tubo traqueal com cuff inflado e acesso IO em úmero/fêmur.",
+    regraOuro: "Cubas Cap. 20 / Carpenter 6ª ed.: Em paralisia flácida ascendente ('pescoço mole' / limberneck), suspeitar imediatamente de BOTULISMO (suporte com fluidoterapia, gavagem, proteção ocular e retirada do lago contaminado) ou intoxicação por CHUMBO/ZINCO (RX de moela!). Atenção a Pododermatite e prolapso de falo em machos.",
+    subespecies: [
+      { nome: "Marreco / Irerê (Dendrocygna / Anas — 600 g a 1.1 kg)", peso: 850, unid: "g", alerta: "" },
+      { nome: "Pato-do-mato / Doméstico (Cairina moschata — 2.0 a 4.0 kg)", peso: 2.8, unid: "kg", alerta: "Alta incidência de bumblefoot, botulismo e prolapso fálico em machos." },
+      { nome: "Ganso / Cisne (Anser / Cygnus — 4.0 a 10.0 kg)", peso: 5.5, unid: "kg", alerta: "Cuidado com golpe das asas; atenção especial à intoxicação por chumbo e aspergilose." }
+    ],
+    sedacao: [
+      { nome: "Sedação Segura p/ RX, Curativo de Bumblefoot e Manejo", drogas: [["Midazolam", 1.5], ["Butorfanol", 1.5]], via: "IM ou IV (metatarsal)", obs: "Carpenter 6ª ed. Associar Cetamina (10 mg/kg IM) se precisar de imobilização maior." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (15 mg/kg) + Midazolam (1.5 mg/kg) IM peitoral", 15, 100, 1.5, 5],
+      etapa2: ["Propofol (10 mg/kg IV na metatarsal medial) até arreflexia", 10, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV) após plano profundo.", 1.0]
+    }
+  },
+  // 29: Galliformes
+  {
+    id: "Galliformes", grupo: "Aves — Galliformes & Tinamiformes", nome: "🦚 Galliformes & Tinamiformes (Jacu, Mutum, Pavão, Galinha, Inhambu)",
+    tMin: 40.5, tBasalMin: 40.5, tMax: 42.5, fluidoManut: 55, bolusChoque: 10, fatorK: 78, gavMax: 25,
+    tuboSangue: "Microtubo com Heparina de Lítio (Veia Basílica/Ulnar ou Jugular Direita)",
+    vias: "VO (inglúvio verdadeiro), IM (peitoral), SC (inguinal/cervical), IV (basílica, metatarsal, jugular), IO (ulna/tibiotarso)",
+    proibido: "⛔ Corticoides, Pentabiótico, tubo traqueal com cuff. ⚠️ EM AVES DE PRODUÇÃO/OVOS: Metronidazol e diversos fármacos são PROIBIDOS por lei (resíduos na cadeia alimentar)!",
+    regraOuro: "Cubas Cap. 19 & 21 / Diseases of Poultry: Investigar Micoplasmose (sinusite infraorbitária → Doxiciclina/Tilosina), Bouba Aviária, Histomoníase (em pavões/mutuns), Marek e pododermatite. Em Tinamiformes (Inhambu/Codorna), cuidado extremo com estresse de contenção (autotomia de penas e miopatia!).",
+    subespecies: [
+      { nome: "Jacu / Aracuã / Jacutinga (Penelope / Ortalis / Aburria — 0.7 a 1.5 kg)", peso: 1.1, unid: "kg", alerta: "Cracidae neotropical: sensíveis a micoplasmose e aspergilose." },
+      { nome: "Mutum / Pavão (Crax / Pavo cristatus — 2.5 a 5.0 kg)", peso: 3.5, unid: "kg", alerta: "Alta sensibilidade à Histomoníase ('cabeça negra') e pododermatite." },
+      { nome: "Galinha-doméstica / Pet (Gallus gallus — 1.2 a 2.8 kg)", peso: 1.8, unid: "kg", alerta: "Se os ovos/carne forem consumidos, respeitar legislação de carência e proibições (ex.: Metronidazol proibido em produção!)." },
+      { nome: "Inhambu / Codorna / Perdiz (Tinamiformes — 150 a 500 g)", peso: 280, unid: "g", alerta: "Risco extremo de trauma craniano por voo explosivo vertical em gaiolas rígidas (forrar teto com espuma/tecido!)." }
+    ],
+    sedacao: [
+      { nome: "Sedação Segura p/ Procedimentos e Radiografia", drogas: [["Midazolam", 1.5], ["Butorfanol", 1.5]], via: "IM (peitoral)", obs: "Associar Cetamina (10–15 mg/kg IM) ou Isoflurano para cirurgias." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (20 mg/kg) + Midazolam (2 mg/kg) IM", 20, 100, 2.0, 5],
+      etapa2: ["Propofol (10 mg/kg IV na basílica) até apneia e arreflexia", 10, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV) após plano profundo.", 1.0]
+    }
+  },
+  // 30: Tayassuidae
+  {
+    id: "Tayassuidae", grupo: "Artiodactyla — Tayassuidae & Suidae", nome: "🐗 Cateto, Queixada, Javali & Mini-pig",
+    tMin: 38.0, tBasalMin: 38.2, tMax: 39.5, fluidoManut: 50, bolusChoque: 15, fatorK: 70, gavMax: 25,
+    tuboSangue: "Tubo EDTA + Vermelha/Amarela (Veia Cava Cranial, Jugular Externa ou Auricular Marginal)",
+    vias: "IV (veia marginal da orelha, cefálica), IM (pescoço atrás da orelha — evitar tecido adiposo espesso!), SC, VO",
+    proibido: "⛔ Corticoides no TCE! Risco elevado de HIPERTERMIA MALIGNA / estresse térmico (suínos e taiassuídeos não suam de forma eficaz — resfriar imediatamente se T > 40 °C!).",
+    regraOuro: "Cubas Cap. 48 / West 3ª ed.: Contenção segura contra os caninos afiados de catetos e queixadas. Intubação endotraqueal difícil (laringe angulada + divertículo faríngeo — usar guia/estilete!). Em Mini-pigs pet, investigar obesidade, artrite e erisipela.",
+    subespecies: [
+      { nome: "Cateto / Caititu (Dicotyles tajacu — 15 a 25 kg)", peso: 20.0, unid: "kg", alerta: "Glândula odorífera dorsal lombar (não confundir com ferida/abscesso!); caninos cortantes." },
+      { nome: "Queixada (Tayassu pecari — 25 a 40 kg)", peso: 32.0, unid: "kg", alerta: "Animais de bando altamente defensivos; contenção química IM recomendada." },
+      { nome: "Mini-pig / Suíno Pet (Sus scrofa domesticus — 15 a 60 kg)", peso: 30.0, unid: "kg", alerta: "Acesso venoso na veia marginal da orelha; risco de hipertermia sob estresse." },
+      { nome: "Javali / Porco-monteiro (Sus scrofa — 50 a 110 kg)", peso: 70.0, unid: "kg", alerta: "Espécie exótica invasora com alto risco sanitário (Peste Suína / Aujeszky / Brucelose)." }
+    ],
+    sedacao: [
+      { nome: "Contenção Química Balanceada (Exame / Curativo / Transporte)", drogas: [["Cetamina", 10.0], ["Midazolam", 0.4], ["Butorfanol", 0.2]], via: "IM (pescoço atrás da orelha)", obs: "Cubas Cap. 48 / West 3ª ed. Monitorar temperatura retal continuamente." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (15 mg/kg) + Midazolam (0.5 mg/kg) IM", 15, 100, 0.5, 5],
+      etapa2: ["Propofol (6 mg/kg IV na veia auricular) até arreflexia", 6, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV) após plano profundo.", 1.0]
+    }
+  },
+  // 31: Apodiformes
+  {
+    id: "Apodiformes", grupo: "Aves — Apodiformes (Microfauna Extrema)", nome: "✨ Beija-flores e Andorinhões (Apodiformes)",
+    tMin: 18.0, tBasalMin: 39.5, tMax: 42.5, fluidoManut: 100, bolusChoque: 10, fatorK: 150, gavMax: 15,
+    tuboSangue: "⚠️ Coleta de sangue raramente indicada em Beija-flores < 10 g (volume seguro < 0,04 mL!). Em Andorinhões: capilar heparinizado.",
+    vias: "VO (gota na ponta do bico com seringa de insulina — 1ª escolha!), Intranasal, SC/IM apenas em Diluição 1:100 (extrema cautela!)",
+    proibido: "⛔ NUNCA OFERECER MEL (risco letal de candidíase/aspergilose de língua e inglúvio!). ⛔ PROIBIDO jejum > 20–30 minutos em beija-flores! ⛔ PROIBIDO fármacos injetáveis puros (superdosagem volumétrica fatal!), Corticoides e Pentabiótico.",
+    regraOuro: "Cubas Cap. 29: 1) EMERGÊNCIA ENERGÉTICA IMEDIATA: oferecer gotas de néctar (1 parte de açúcar branco refinado para 4 partes de água filtrada = 20%) a cada 15–20 minutos; 2) TORPOR NOTURNO FISIOLÓGICO: à noite, a temperatura cai para 18–25 °C — não confundir com óbito nem superaquecer bruscamente!",
+    subespecies: [
+      { nome: "Beija-flor-tesoura / Médio (Eupetomena / Amazilia — 4 a 9 g)", peso: 6, unid: "g", alerta: "🚨 PESO 4–9 g: Oferecer néctar 20% IMEDIATAMENTE! Toda medicação exige Diluição 1:100 ou via oral." },
+      { nome: "Beija-flor-pequeno (Chlorostilbon / Phaethornis — 2.5 a 5 g)", peso: 4, unid: "g", alerta: "🚨 MICROFAUNA EXTREMA (2,5–5 g): Risco de morte por hipoglicemia em 20 minutos; manipular o mínimo possível." },
+      { nome: "Andorinhão (Streptoprocne / Chaetura — 20 a 100 g)", peso: 35, unid: "g", alerta: "Insetívoro aéreo: não consegue decolar do chão plano (testar voo apenas a partir de superfície elevada segura!); usar Diluição 1:10/1:100." }
+    ],
+    sedacao: [
+      { nome: "Sedação Intranasal Antiestresse (Diluição 1:100 em Beija-flores!)", drogas: [["Midazolam", 2.0], ["Butorfanol", 2.0]], via: "Intranasal (preferir Isoflurano em máscara p/ procedimentos!)", obs: "Cubas Cap. 29 / Carpenter 6ª ed." }
+    ],
+    eutanasia: {
+      etapa1: ["Midazolam (2 mg/kg) intranasal ou indução direta suave em câmara de Isoflurano", 15, 100, 2.0, 5],
+      etapa2: ["Isoflurano em alta concentração até apneia e arreflexia profunda", 10, 10],
+      etapa3: ["KCl 19,1% (apenas após confirmação absoluta de plano profundo).", 1.0]
+    }
+  },
+  // 32: Anfibios
+  {
+    id: "Anfibios", grupo: "Anfíbios — Anura & Caudata", nome: "🐸 Anfíbios (Sapo-cururu, Rã, Perereca, Axolote)",
+    tMin: 18.0, tBasalMin: 20.0, tMax: 26.0, fluidoManut: 25, bolusChoque: 5, fatorK: 5, gavMax: 10,
+    tuboSangue: "Microtubo com Heparina de Lítio (Veia Abdominal Ventral ou Femoral — hemácias nucleadas grandes)",
+    vias: "Banho terapêutico transdérmico (1ª escolha em água declorada!), Intracelômica (ICe — quadrante caudal), Saco linfático dorsal (SC), IM (membro anterior), VO",
+    proibido: "⛔ PROIBIDO MANUSEAR SEM LUVAS SEM TALCO UMEDECIDAS! ⛔ PROIBIDO ÁLCOOL, PVPI/IODO, CLOREXIDINA ALCOÓLICA E ÁGUA CLORADA DA TORNEIRA (absorção cutânea letal!). ⛔ Proibido Pentabiótico, Lidocaína/Bupivacaína tópica sem controle (usar MS-222!), Corticoides e AINEs em hidropsia/falência renal.",
+    regraOuro: "Cubas Cap. 12 / Carpenter 6ª ed. (Cap. 2): Pele semipermeável respira e absorve fármacos — toda água deve ser DECLORADA! Reidratação por banho raso (Ringer de Anfíbio ou NaCl 0,9% diluído 2:1 em água destilada). Em letargia/eritema ventral ('Perna Vermelha') ou descamação: pesquisar Quitridiomicose (Bd → banho de Itraconazol 0,01% por 5 min/dia × 10 dias!).",
+    subespecies: [
+      { nome: "Sapo-cururu (Rhinella diptycha / R. icterica — 150 a 600 g)", peso: 300, unid: "g", alerta: "Glândulas parotoides secretam bufotoxinas cardiotóxicas sob pressão — usar luvas umedecidas e proteger olhos." },
+      { nome: "Rã-touro / Rã-pimenta (Aquarana / Leptodactylus — 150 a 500 g)", peso: 250, unid: "g", alerta: "Investigar Síndrome da Perna Vermelha (Aeromonas/Ranavírus) e manter umidade controlada." },
+      { nome: "Perereca / Rã-arborícola (Boana / Phyllomedusa — 15 a 80 g)", peso: 35, unid: "g", alerta: "Pele muito delicada; usar Diluição 1:10/1:100 ou banhos terapêuticos em água declorada." },
+      { nome: "Axolote / Salamandra (Ambystoma mexicanum — 60 a 150 g)", peso: 90, unid: "g", alerta: "🚨 ESTRITAMENTE AQUÁTICO DE ÁGUA FRIA (16–20 °C): Água > 24 °C causa estresse severo e infecções branquiais!" }
+    ],
+    sedacao: [
+      { nome: "Anestesia / Contenção Química (Preferir Banho de MS-222 0,5–1 g/L tamponado!)", drogas: [["Cetamina", 30.0], ["Midazolam", 1.0]], via: "IM/SC (saco linfático dorsal) ou Banho de MS-222 tamponado com NaHCO3", obs: "Carpenter 6ª ed. Na recuperação, enxaguar com água declorada limpa mantendo narinas fora da água!" }
+    ],
+    eutanasia: {
+      etapa1: ["Banho de MS-222 (Tricaína 5–10 g/L tamponado) ou Cetamina (50 mg/kg) + Midazolam (2 mg/kg) ICe", 50, 100, 2.0, 5],
+      etapa2: ["Propofol (10 mg/kg ICe/IV) ou imersão prolongada em MS-222 até ausência total de batimentos cardíacos (confirmar por Doppler!)", 10, 10],
+      etapa3: ["KCl 19,1% (1.5 mL/kg ICe/IC) somente após confirmação absoluta de inconsciência profunda.", 1.5]
+    }
+  },
+  // 33: Equideos
+  {
+    id: "Equideos", grupo: "Grandes Animais — Perissodactyla (Equidae)", nome: "🐴 Equídeos (Cavalo, Pônei, Zebra, Asinino)",
+    tMin: 37.2, tBasalMin: 37.5, tMax: 38.5, fluidoManut: 50, bolusChoque: 20, fatorK: 70, gavMax: 15,
+    tuboSangue: "Tubo EDTA + Vermelha/Amarela + Fluoreto/Heparina (Lactato na Cólica! Coleta: Jugular Externa)",
+    vias: "IV (jugular externa — 1ª escolha!), IM (tábua do pescoço / peitoral / glúteo — máx 15–20 mL por ponto!), VO (sonda nasogástrica / pasta)",
+    proibido: "⛔ 100% LETAL: Clindamicina, Lincomicina, Eritromicina oral e Amoxicilina oral em adultos (colite necrosante fatal por Clostridium difficile/perfringens!). ⛔ Proibido Doxiciclina IV (arritmia/morte súbita!) e Metoclopramida (excitação extrapiramidal severa!).",
+    regraOuro: "Equine Medicine Secrets / Plumb's 10ª ed.: Na SÍNDROME CÓLICA: 1) Sondagem nasogástrica imediata (avaliar refluxo enterogástrico!); 2) Analgesia: Escopolamina (0,3 mg/kg IV) + Dipirona (25 mg/kg IV) + Flunixin/Meloxicam (0,6 mg/kg IV); 3) Aferir lactato e FC (> 60 bpm + refluxo + dor refratária = avaliação cirúrgica!). Na úlcera gástrica (EGUS): Omeprazol 4 mg/kg VO SID!",
+    subespecies: [
+      { nome: "Cavalo Adulto (Equus caballus — 350 a 550 kg)", peso: 450.0, unid: "kg", alerta: "Pentabiótico IM profunda: dividir em múltiplos pontos (máx 15–20 mL/local) e ASPIRAR sempre (Procaína IV é fatal!)." },
+      { nome: "Potro / Pônei (40 a 180 kg)", peso: 120.0, unid: "kg", alerta: "🚨 POTROS / PÔNEIS: Evitar Enrofloxacina em potros em crescimento (artropatia erosiva!); em pôneis anoréxicos, monitorar triglicerídeos (hiperlipidemia!)." },
+      { nome: "Zebra (Equus quagga / E. grevyi — 250 a 380 kg)", peso: 300.0, unid: "kg", alerta: "Cubas Cap. 46 / West 3ª ed.: Equídeo selvagem de fuga explosiva; contenção química especializada com dardo e reversores." },
+      { nome: "Asinino / Muar (Equus asinus — 150 a 300 kg)", peso: 220.0, unid: "kg", alerta: "Asininos mascaram sinais de dor e desenvolvem hiperlipidemia fatal rapidamente sob jejum ou estresse!" }
+    ],
+    sedacao: [
+      { nome: "Sedação em Estação (Cólica / Curativos / Odontologia)", drogas: [["Butorfanol", 0.05], ["Midazolam", 0.05]], via: "IV (associar Xilazina 0,5 mg/kg ou Detomidina 0,01 mg/kg IV)", obs: "Equine Medicine Secrets. Nunca aplicar Midazolam IV isolado em equino adulto hígido (causa ataxia/queda!)." },
+      { nome: "Indução Anestésica Curta (Pós-Alfa-2 IV)", drogas: [["Cetamina", 2.2], ["Midazolam", 0.05]], via: "IV rápido (somente após sedação profunda com Xilazina/Detomidina!)", obs: "Padrão-ouro de indução a campo." }
+    ],
+    eutanasia: {
+      etapa1: ["Sedação profunda com Alfa-2 IV + Cetamina (2.2 mg/kg) + Midazolam (0.05 mg/kg) IV", 2.2, 100, 0.05, 5],
+      etapa2: ["Tiopental/Propofol IV (ou superdosagem barbitúrica) até apneia e perda total de reflexo corneal", 4, 10],
+      etapa3: ["KCl 19,1% (0.5 a 1 mL/kg IV rápido na jugular) EXCLUSIVAMENTE após plano anestésico profundo confirmado!", 0.75]
+    }
+  },
+  // 34: TestudinesMarinhos
+  {
+    id: "TestudinesMarinhos", grupo: "Répteis — Testudines Marinhos", nome: "🐢 Tartarugas Marinhas (Verde, Cabeçuda, De-pente, Oliva)",
+    tMin: 22.0, tBasalMin: 24.0, tMax: 28.0, fluidoManut: 15, bolusChoque: 5, fatorK: 10, gavMax: 10,
+    tuboSangue: "⚠️ OBRIGATÓRIO HEPARINA DE LÍTIO (EDTA lisa hemácias!). Coleta: Seio Cervical Dorsal (lateral ao pescoço).",
+    vias: "IV (seio cervical dorsal), IM (musculatura das nadadeiras anteriores — deltoide/peitoral), SC (fossa pré-femoral / axilar), ICe, VO",
+    proibido: "⛔ PROIBIDO IVERMECTINA E TODAS AS AVERMECTINAS (100% LETAL em todos os quelônios — paralisia flácida irreversível!). Proibido corticoides e Pentabiótico.",
+    regraOuro: "Cubas Cap. 17: Manter fora da água em colchão úmido quando debilitada (risco de afogamento!) até recuperar força natatória. Em desidratação marinha (hipernatremia): preferir solução hiposmolar (NaCl 0,45% + Glicose 2,5% ou RL diluído). Investigar ingestão de plástico/anzol (RX) e Fibropapilomatose.",
+    subespecies: [
+      { nome: "Tartaruga-verde (Chelonia mydas — 5 a 80 kg)", peso: 18.0, unid: "kg", alerta: "Alta incidência de Fibropapilomatose (tumores cutâneos/oculares) e impacção por lixo marinho." },
+      { nome: "Tartaruga-cabeçuda (Caretta caretta — 25 a 110 kg)", peso: 55.0, unid: "kg", alerta: "Mordida de altíssima pressão; frequente ingestão de anzóis de espinhel." },
+      { nome: "Tartaruga-de-pente (Eretmochelys imbricata — 15 a 60 kg)", peso: 30.0, unid: "kg", alerta: "" },
+      { nome: "Tartaruga-oliva (Lepidochelys olivacea — 20 a 45 kg)", peso: 32.0, unid: "kg", alerta: "" }
+    ],
+    sedacao: [
+      { nome: "Sedação / Endoscopia / Retirada de Anzol", drogas: [["Cetamina", 15.0], ["Midazolam", 1.5]], via: "IM nas nadadeiras anteriores (ou Propofol 3–5 mg/kg IV no seio cervical)", obs: "Cubas Cap. 17. Manter cabeça elevada fora d'água até retorno completo dos reflexos!" }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (25 mg/kg) + Midazolam (2 mg/kg) IM nas nadadeiras anteriores", 25, 100, 2.0, 5],
+      etapa2: ["Propofol (10 mg/kg IV no seio cervical dorsal) até apneia e perda de reflexos", 10, 10],
+      etapa3: ["KCl 19,1% (1.5 mL/kg IV no seio cervical dorsal) após plano profundo.", 1.5]
+    }
+  },
+  // 35: Sphenisciformes
+  {
+    id: "Sphenisciformes", grupo: "Aves — Sphenisciformes (Marinhas)", nome: "🐧 Pinguins (Pinguim-de-Magalhães)",
+    tMin: 38.0, tBasalMin: 38.5, tMax: 40.0, fluidoManut: 50, bolusChoque: 10, fatorK: 78, gavMax: 20,
+    tuboSangue: "Tubo Heparina de Lítio (Veia Jugular Direita ou Metatarsal Dorsal/Medial — fazer esfregaço p/ Malária Aviária!)",
+    vias: "IV (jugular direita, metatarsal medial), SC (interescapular/inguinal), IM (peitoral), VO (sonda flexível ou peixe medicado)",
+    proibido: "⛔ PROIBIDO CORTICOIDES (Aspergilose fulminante — principal causa de morte em pinguins reabilitados!). ⛔ Proibido Pentabiótico, tubo traqueal com cuff e superaquecimento em salas quentes!",
+    regraOuro: "Cubas Cap. 22 / Carpenter 6ª ed.: 1) No encalhe hipotérmico/caquético: aquecer primeiro até >= 38 °C + hidratação morna antes de alimentar com peixe sólido; 2) Iniciar ITRACONAZOL (10 mg/kg VO) profilático/terapêutico contra Aspergilose; 3) Pesquisar Plasmodium (Malária Aviária); 4) Em cativeiro de água doce, suplementar NaCl (sal) p/ preservar a glândula de sal!",
+    subespecies: [
+      { nome: "Pinguim-de-Magalhães Juvenil / Encalhe (Spheniscus magellanicus — 2.0 a 3.5 kg)", peso: 2.6, unid: "kg", alerta: "🚨 ENCALHE COSTEIRO: Aquecer gradualmente -> hidratar -> papa/peixe só após normotermia! Risco máximo de Aspergilose e Malária Aviária." },
+      { nome: "Pinguim-de-Magalhães Adulto (Spheniscus magellanicus — 3.5 a 5.0 kg)", peso: 4.2, unid: "kg", alerta: "Manter recinto fresco (18–22 °C) e piso acolchoado/piscina p/ prevenir pododermatite (bumblefoot)." }
+    ],
+    sedacao: [
+      { nome: "Sedação Segura p/ RX, Coleta e Curativo de Bumblefoot", drogas: [["Midazolam", 1.0], ["Butorfanol", 1.0]], via: "IM ou Intranasal", obs: "Monitorar temperatura para evitar hipertermia durante contenção." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (15 mg/kg) + Midazolam (1.5 mg/kg) IM", 15, 100, 1.5, 5],
+      etapa2: ["Propofol (10 mg/kg IV na jugular direita) até arreflexia", 10, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV) após plano profundo.", 1.0]
+    }
+  },
+  // 36: BovideosSilv
+  {
+    id: "BovideosSilv", grupo: "Artiodactyla — Bovidae (Ruminantes)", nome: "🐃 Bovídeos Silvestres & Antílopes (Bisão, Antílope, Gnu, Kudu, Aoudad)",
+    tMin: 38.0, tBasalMin: 38.2, tMax: 39.5, fluidoManut: 45, bolusChoque: 15, fatorK: 70, gavMax: 20,
+    tuboSangue: "Tubo EDTA + Vermelha/Amarela (Veia Jugular Externa ou Coccígea Ventral)",
+    vias: "IV (jugular externa, auricular), IM (glúteo/pescoço — dardo ou tronco de contenção), SC, VO (evitar ATBs que destruam o rúmen!)",
+    proibido: "⛔ PROIBIDO antimicrobianos orais beta-lactâmicos/lincosamidas em adultos (Amoxi+Clav VO, Clindamicina, Cefalexina VO destroem microbiota ruminal!). ⛔ PROIBIDO decúbito lateral prolongado (timpanismo ruminal + aspiração!).",
+    regraOuro: "Cubas Cap. 52 / West 3ª ed.: Ruminantes estritos — manter SEMPRE em decúbito esternal com cabeça elevada e focinho baixo na anestesia! Em antílopes, risco extremo de MIOPATIA DE CAPTURA e hipertermia (monitorar T retal e CK).",
+    subespecies: [
+      { nome: "Antílope-negro / Gazela / Impala (30 a 70 kg)", peso: 45.0, unid: "kg", alerta: "Risco extremo de miopatia de captura e fratura de membros em manejo estressante." },
+      { nome: "Aoudad / Carneiro-da-barbária (Ammotragus lervia — 60 a 130 kg)", peso: 85.0, unid: "kg", alerta: "" },
+      { nome: "Eland / Kudu / Gnu / Waterbuck (180 a 450 kg)", peso: 250.0, unid: "kg", alerta: "Grandes bovídeos: posicionamento esternal obrigatório e suporte respiratório." },
+      { nome: "Bisão / Búfalo (Bison / Bubalus — 450 a 800 kg)", peso: 600.0, unid: "kg", alerta: "Contenção química com dardo de alto calibre ou tronco hidráulico." }
+    ],
+    sedacao: [
+      { nome: "Contenção Química Balanceada (Pequenos/Médios Bovídeos)", drogas: [["Cetamina", 4.0], ["Midazolam", 0.3], ["Butorfanol", 0.2]], via: "IM (dardo ou contenção)", obs: "West 3ª ed. / Cubas Cap. 52. Associar Alfa-2 se hígido (reversor pronto!)." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (6 mg/kg) + Midazolam (0.3 mg/kg) IM", 6, 100, 0.3, 5],
+      etapa2: ["Propofol (5 mg/kg IV na jugular) até apneia e arreflexia", 5, 10],
+      etapa3: ["KCl 19,1% (0.75 mL/kg IV na jugular) após plano profundo.", 0.75]
+    }
+  },
+  // 37: Camelideos
+  {
+    id: "Camelideos", grupo: "Artiodactyla — Camelidae (Pseudorruminantes)", nome: "🦙 Camelídeos Neotropicais (Lhama, Alpaca, Guanaco, Vicunha)",
+    tMin: 37.5, tBasalMin: 37.8, tMax: 38.9, fluidoManut: 45, bolusChoque: 15, fatorK: 70, gavMax: 20,
+    tuboSangue: "Tubo EDTA + Vermelha/Amarela (Jugular Direita profunda junto ao processo transverso de C5–C6 — sem sulco jugular visível!)",
+    vias: "IV (jugular profunda em C5–C6 ou safena), IM (tríceps/semimembranoso — evitar pele cervical grossa!), SC (axila/parede torácica), VO",
+    proibido: "⛔ PROIBIDO antimicrobianos orais beta-lactâmicos/lincosamidas em adultos (disbiose dos compartimentos fermentativos C1–C2!). Evitar superaquecimento (tosquia necessária em climas quentes!).",
+    regraOuro: "Cubas Cap. 49 / West 3ª ed.: Pseudorruminantes (3 compartimentos: C1, C2 e C3 — alta incidência de ÚLCERA DE C3 por estresse!). Não têm sulco jugular evidente (puncionar ventralmente ao processo transverso de C5–C6 evitando a artéria carótida!). Hemácias são eliptócitos fisiológicos (VCM baixo).",
+    subespecies: [
+      { nome: "Alpaca (Vicugna pacos — 50 a 75 kg)", peso: 60.0, unid: "kg", alerta: "Muito sensível ao estresse térmico; manter tosquiada em clima quente e monitorar úlcera de C3." },
+      { nome: "Lhama (Lama glama — 110 a 180 kg)", peso: 140.0, unid: "kg", alerta: "Pele cervical espessa (cuidado na punção jugular em C5–C6); machos possuem dentes caninos de luta." },
+      { nome: "Guanaco / Vicunha (Lama guanicoe / Vicugna vicugna — 45 a 110 kg)", peso: 75.0, unid: "kg", alerta: "Espécies silvestres altamente suscetíveis à miopatia de captura." }
+    ],
+    sedacao: [
+      { nome: "Contenção Química Balanceada (Exame / Odontologia / Transporte)", drogas: [["Cetamina", 5.0], ["Midazolam", 0.3], ["Butorfanol", 0.2]], via: "IM (tríceps ou coxa)", obs: "Cubas Cap. 49 / West 3ª ed. Manter decúbito esternal (posição kush)." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (8 mg/kg) + Midazolam (0.4 mg/kg) IM", 8, 100, 0.4, 5],
+      etapa2: ["Propofol (5 mg/kg IV na jugular) até apneia e arreflexia", 5, 10],
+      etapa3: ["KCl 19,1% (0.75 mL/kg IV na jugular) após plano profundo.", 0.75]
+    }
+  }
+);
+
+// 4. Referências Laboratoriais (LAB_REF_DB) para Todos os 17 Novos Táxons (Campbell / Cubas / Fowler)
+Object.assign(LAB_REF_DB, {
+  FelideosSilv:      { ht:[32,48], ppt:[6.0,8.2], glic:[75,160],  renalNome:"Creatinina (mg/dL)", renal:[0.9,2.2], hepNome:"ALT (U/L)", hep:[15,110], nota:"Felídeos silvestres (Cubas Cap. 37 / Fowler): grande massa muscular eleva creatinina basal discretamente; hiperglicemia de estresse comum." },
+  Mustelideos:       { ht:[42,58], ppt:[5.2,7.4], glic:[85,140],  renalNome:"Creatinina (mg/dL)", renal:[0.2,0.8], hepNome:"ALT (U/L)", hep:[40,180], nota:"🚨 Ferrets (BSAVA / Campbell): Ht fisiológico alto (42–58%); Glicemia < 70 mg/dL = forte suspeita de insulinoma; Creatinina > 1,0 já indica azotemia!" },
+  Lagartos:          { ht:[24,40], ppt:[3.5,7.5], glic:[60,180],  renalNome:"Ác. Úrico (mg/dL)",  renal:[1.5,9.0], hepNome:"AST (U/L)", hep:[20,120], nota:"Sauria (Campbell / Cubas Cap. 14): uricotélicos; avaliar relação Cálcio:Fósforo (> 1,5:1) na suspeita de DOM!" },
+  Crocodilianos:     { ht:[18,34], ppt:[3.5,6.5], glic:[55,140],  renalNome:"Ác. Úrico (mg/dL)",  renal:[1.5,9.5], hepNome:"AST (U/L)", hep:[20,150], nota:"🚨 Crocodylia (Cubas Cap. 13 / Campbell): usar Heparina de Lítio (EDTA causa hemólise); coleta padrão no Seio Occipital!" },
+  Cervideos:         { ht:[35,52], ppt:[5.8,7.8], glic:[70,160],  renalNome:"Creatinina (mg/dL)", renal:[0.8,2.0], hepNome:"AST (U/L)", hep:[50,180], nota:"🚨 Cervidae (Cubas Cap. 51): avaliar CK + AST na suspeita de Miopatia de Captura (CK > 2.000 U/L = rabdomiólise grave!)." },
+  Tapiridae:         { ht:[28,44], ppt:[6.0,8.0], glic:[70,130],  renalNome:"Creatinina (mg/dL)", renal:[0.8,1.8], hepNome:"AST (U/L)", hep:[60,220], nota:"Tapiridae (Cubas Cap. 47 / Fowler): avaliar AST e GGT para fígado (ALT tem baixa especificidade em perissodáctilos)." },
+  Ratitas:           { ht:[38,52], ppt:[3.2,5.2], glic:[170,300], renalNome:"Ác. Úrico (mg/dL)",  renal:[3.0,12.0],hepNome:"AST (U/L)", hep:[120,380],nota:"Ratitas (Cubas Cap. 18 / Campbell): monitorar CK + AST p/ miopatia de captura; uricotélicos (avaliar Ácido Úrico!)." },
+  Anseriformes:      { ht:[38,52], ppt:[3.2,5.2], glic:[180,320], renalNome:"Ác. Úrico (mg/dL)",  renal:[3.0,12.0],hepNome:"AST (U/L)", hep:[40,180], nota:"🚨 Anseriformes (Campbell): usar Heparina de Lítio (EDTA lisa hemácias em muitos patos/gansos/cisnes!)." },
+  Galliformes:       { ht:[32,48], ppt:[3.5,5.5], glic:[180,320], renalNome:"Ác. Úrico (mg/dL)",  renal:[2.5,10.0],hepNome:"AST (U/L)", hep:[100,280],nota:"Galliformes/Tinamiformes (Campbell / Cubas Cap. 21): uricotélicos; avaliar AST + CK em conjunto." },
+  Tayassuidae:       { ht:[32,48], ppt:[6.0,8.0], glic:[70,130],  renalNome:"Creatinina (mg/dL)", renal:[0.8,2.2], hepNome:"ALT (U/L)", hep:[25,85],  nota:"Tayassuidae & Suidae (Cubas Cap. 48): avaliar CK na suspeita de estresse térmico / hipertermia." },
+  Apodiformes:       { ht:[48,62], ppt:[2.5,4.5], glic:[300,650], renalNome:"Ác. Úrico (mg/dL)",  renal:[2.5,11.0],hepNome:"AST (U/L)", hep:[130,380],nota:"🚨 Beija-flores (Cubas Cap. 29): glicemia fisiológica altíssima (300–650 mg/dL); coleta de sangue raramente segura em aves < 10 g!" },
+  Anfibios:          { ht:[20,40], ppt:[2.5,6.0], glic:[20,70],   renalNome:"Ác. Úrico (mg/dL)",  renal:[0.5,4.0], hepNome:"AST (U/L)", hep:[30,180], nota:"Anfíbios (Cubas Cap. 12 / Campbell): hemácias nucleadas grandes; espécies aquáticas excretam amônia e terrestres ureia." },
+  Equideos:          { ht:[32,48], ppt:[5.8,7.8], glic:[75,115],  renalNome:"Creatinina (mg/dL)", renal:[0.9,1.9], hepNome:"AST (U/L)", hep:[150,380],nota:"Equidae (Equine Medicine Secrets): ALT tem pouco valor hepático — avaliar AST, GGT, SDH e Lactato (< 2 mmol/L na cólica!)." },
+  TestudinesMarinhos:{ ht:[24,40], ppt:[3.0,5.5], glic:[60,130],  renalNome:"Ác. Úrico (mg/dL)",  renal:[0.5,3.0], hepNome:"AST (U/L)", hep:[80,350], nota:"🚨 Tartarugas Marinhas (Cubas Cap. 17 / Campbell): usar Heparina de Lítio! Avaliar sódio/eletrólitos em encalhes desidratados." },
+  Sphenisciformes:   { ht:[40,54], ppt:[4.0,6.2], glic:[180,300], renalNome:"Ác. Úrico (mg/dL)",  renal:[4.0,15.0],hepNome:"AST (U/L)", hep:[120,350],nota:"🚨 Pinguins (Cubas Cap. 22): Ác. Úrico sobe pós-refeição de peixe; realizar esfregaço sanguíneo p/ Malária Aviária (Plasmodium)!" },
+  BovideosSilv:      { ht:[32,48], ppt:[6.0,8.0], glic:[60,120],  renalNome:"Creatinina (mg/dL)", renal:[1.0,2.2], hepNome:"AST (U/L)", hep:[60,160], nota:"Bovidae (Cubas Cap. 52): avaliar AST + GGT (fígado) e CK (miopatia de captura)." },
+  Camelideos:        { ht:[26,42], ppt:[5.5,7.5], glic:[90,150],  renalNome:"Creatinina (mg/dL)", renal:[1.0,2.4], hepNome:"AST (U/L)", hep:[120,300],nota:"Camelidae (Cubas Cap. 49): hemácias elípticas (eliptócitos fisiológicos c/ VCM baixo); glicemia basal maior que bovinos!" }
+});
+
+// 5. Protocolos XABCDE — Particularidades Clínicas dos Novos Táxons
+(function expandirXabcdeNovosTaxons() {
+  const etapas = PROTOCOLOS_MESTRES?.xabcde?.etapas || [];
+  const porLetra = l => etapas.find(e => e.letra === l)?.porTaxon;
+
+  const pX = porLetra("X");
+  if (pX) {
+    pX.Equideos = "Em equinos/antas, a volemia é ~8% do PV (35–40 L em cavalo de 450 kg): hemorragias arteriais exigem compressão firme imediata + Ácido Tranexâmico (10 mg/kg IV lento) + reposição volêmica vigorosa.";
+  }
+  const pA = porLetra("A");
+  if (pA) {
+    pA.Cervideos = "🚨 RUMINANTES (Cervídeos/Bovídeos): Posicionar IMEDIATAMENTE em DECÚBITO ESTERNAL com cabeça elevada e focinho inclinado para baixo — evita timpanismo ruminal e broncoaspiração letal!";
+    pA.BovideosSilv = pA.Cervideos;
+    pA.Camelideos = "Manter em decúbito esternal ('posição kush') com pescoço estendido e cabeça baixa para evitar aspiração de regurgito de C1.";
+    pA.Tayassuidae = "Laringe angulada com divertículo faríngeo: usar estilete/guia na intubação endotraqueal.";
+    pA.Anfibios = "Manter pele sempre úmida com água declorada (respiração cutânea ativa!) e nunca usar álcool/iodo próximo às narinas.";
+  }
+  const pB = porLetra("B");
+  if (pB) {
+    pB.Ratitas = "Aves sem quilha esternal: não comprimir o esterno/costelas; manter pescoço longo alinhado sem dobras.";
+    pB.Crocodilianos = "Crocodilianos fazem apneia prolongada e possuem septo pós-hepático: ventilar suavemente (2–4 mov/min) com ar ambiente na recuperação.";
+  }
+  const pC = porLetra("C");
+  if (pC) {
+    pC.FelideosSilv = "🚨 TRÍADE DO CHOQUE FELINO: Aquecer a >= 37,0 °C antes de expansão volêmica agressiva; proibido Lidocaína IV contínua!";
+    pC.Equideos = "Prova de carga em equinos/antas: 15–20 mL/kg de Ringer Lactato (ou Salina Hipertônica 7,5% 4 mL/kg seguida de cristaloide isotônico) via cateter 14G na jugular.";
+    pC.Anfibios = "Reidratação segura por banho raso em água declorada / Ringer de Anfíbio ou via intracelômica (ICe) no quadrante caudal.";
+  }
+  const pE = porLetra("E");
+  if (pE) {
+    pE.Cervideos = "🚨 HIPERTERMIA / MIOPATIA DE CAPTURA: Se T > 40,5 °C, resfriar imediatamente com água fria nas axilas/virilhas, O2 e fluido!";
+    pE.BovideosSilv = pE.Cervideos;
+    pE.Tayassuidae = "Suínos e Taiassuídeos não suam com eficiência: monitorar T retal continuamente e resfriar se > 40,0 °C!";
+    pE.Apodiformes = "🚨 BEIJA-FLORES: Diferenciar TORPOR NOTURNO FISIOLÓGICO (18–25 °C) de hipotermia letal e oferecer néctar 20% a cada 15–20 min!";
+    pE.Sphenisciformes = "Pinguins sob contenção superaquecem rapidamente em salas quentes (manter 18–22 °C); no encalhe hipotérmico, aquecer antes de dar peixe sólido.";
+  }
+})();
+
+// 6. Matriz Completa e Sincronizada de Doses por ID Nominal (38 Fármacos × 17 Novos Táxons)
+// Fontes: Carpenter's 6ª ed., Tratado de Animais Selvagens (Cubas 2ª ed.), West 3ª ed., Plumb's 10ª ed., Equine Medicine Secrets, Spinosa 6ª ed.
+const NOVAS_DOSES_POR_FARMACO = {
+  "Amoxicilina+Clav":    { FelideosSilv:15,   Mustelideos:15,   Lagartos:22,  Crocodilianos:22,  Cervideos:0,     Tapiridae:0,     Ratitas:25,    Anseriformes:125, Galliformes:125, Tayassuidae:15,    Apodiformes:125, Anfibios:20,   Equideos:0,     TestudinesMarinhos:22,  Sphenisciformes:125, BovideosSilv:0,     Camelideos:0     },
+  "Clindamicina":        { FelideosSilv:11,   Mustelideos:11,   Lagartos:5,   Crocodilianos:5,   Cervideos:0,     Tapiridae:0,     Ratitas:25,    Anseriformes:100, Galliformes:100, Tayassuidae:10,    Apodiformes:100, Anfibios:0,    Equideos:0,     TestudinesMarinhos:5,   Sphenisciformes:100, BovideosSilv:0,     Camelideos:0     },
+  "Enrofloxacina":       { FelideosSilv:5,    Mustelideos:5,    Lagartos:5,   Crocodilianos:5,   Cervideos:5,     Tapiridae:5,     Ratitas:10,    Anseriformes:15,  Galliformes:10,  Tayassuidae:5,     Apodiformes:15,  Anfibios:5,    Equideos:5,     TestudinesMarinhos:5,   Sphenisciformes:15,  BovideosSilv:5,     Camelideos:5     },
+  "Marbofloxacina":      { FelideosSilv:2.75, Mustelideos:5,    Lagartos:10,  Crocodilianos:10,  Cervideos:2.75,  Tapiridae:2.75,  Ratitas:5,     Anseriformes:10,  Galliformes:10,  Tayassuidae:2.75,  Apodiformes:10,  Anfibios:10,   Equideos:2.0,   TestudinesMarinhos:10,  Sphenisciformes:10,  BovideosSilv:2.75,  Camelideos:2.75  },
+  "Ceftazidima":         { FelideosSilv:25,   Mustelideos:25,   Lagartos:20,  Crocodilianos:20,  Cervideos:20,    Tapiridae:20,    Ratitas:50,    Anseriformes:75,  Galliformes:75,  Tayassuidae:20,    Apodiformes:75,  Anfibios:20,   Equideos:25,    TestudinesMarinhos:20,  Sphenisciformes:75,  BovideosSilv:20,    Camelideos:20    },
+  "Doxiciclina":         { FelideosSilv:10,   Mustelideos:10,   Lagartos:10,  Crocodilianos:10,  Cervideos:10,    Tapiridae:0,     Ratitas:20,    Anseriformes:35,  Galliformes:35,  Tayassuidae:10,    Apodiformes:35,  Anfibios:10,   Equideos:0,     TestudinesMarinhos:25,  Sphenisciformes:35,  BovideosSilv:10,    Camelideos:10    },
+  "Metronidazol":        { FelideosSilv:10,   Mustelideos:15,   Lagartos:20,  Crocodilianos:20,  Cervideos:15,    Tapiridae:15,    Ratitas:20,    Anseriformes:25,  Galliformes:25,  Tayassuidae:15,    Apodiformes:25,  Anfibios:20,   Equideos:15,    TestudinesMarinhos:20,  Sphenisciformes:25,  BovideosSilv:15,    Camelideos:15    },
+  "Dipirona":            { FelideosSilv:15,   Mustelideos:25,   Lagartos:25,  Crocodilianos:25,  Cervideos:25,    Tapiridae:25,    Ratitas:25,    Anseriformes:25,  Galliformes:25,  Tayassuidae:25,    Apodiformes:25,  Anfibios:10,   Equideos:25,    TestudinesMarinhos:20,  Sphenisciformes:25,  BovideosSilv:25,    Camelideos:25    },
+  "Meloxicam":           { FelideosSilv:0.05, Mustelideos:0.2,  Lagartos:0.2, Crocodilianos:0.2, Cervideos:0.5,   Tapiridae:0.6,   Ratitas:0.5,   Anseriformes:1.0, Galliformes:1.0, Tayassuidae:0.4,   Apodiformes:1.0, Anfibios:0.2,  Equideos:0.6,   TestudinesMarinhos:0.2, Sphenisciformes:0.5, BovideosSilv:0.5,   Camelideos:0.5   },
+  "Tramadol":            { FelideosSilv:2,    Mustelideos:3,    Lagartos:5,   Crocodilianos:5,   Cervideos:2,     Tapiridae:2,     Ratitas:5,     Anseriformes:10,  Galliformes:10,  Tayassuidae:2,     Apodiformes:10,  Anfibios:10,   Equideos:2,     TestudinesMarinhos:5,   Sphenisciformes:5,   BovideosSilv:2,     Camelideos:2     },
+  "Gabapentina":         { FelideosSilv:10,   Mustelideos:10,   Lagartos:10,  Crocodilianos:10,  Cervideos:10,    Tapiridae:10,    Ratitas:10,    Anseriformes:15,  Galliformes:15,  Tayassuidae:10,    Apodiformes:15,  Anfibios:10,   Equideos:10,    TestudinesMarinhos:10,  Sphenisciformes:15,  BovideosSilv:10,    Camelideos:10    },
+  "Butorfanol":          { FelideosSilv:0.3,  Mustelideos:0.3,  Lagartos:1.0, Crocodilianos:1.0, Cervideos:0.2,   Tapiridae:0.15,  Ratitas:0.5,   Anseriformes:1.5, Galliformes:1.5, Tayassuidae:0.2,   Apodiformes:2.0, Anfibios:0.5,  Equideos:0.05,  TestudinesMarinhos:1.0, Sphenisciformes:1.0, BovideosSilv:0.2,   Camelideos:0.2   },
+  "Metadona":            { FelideosSilv:0.2,  Mustelideos:0.2,  Lagartos:1.0, Crocodilianos:0.5, Cervideos:0.1,   Tapiridae:0.1,   Ratitas:0.5,   Anseriformes:1.0, Galliformes:1.0, Tayassuidae:0.15,  Apodiformes:1.0, Anfibios:0,    Equideos:0.1,   TestudinesMarinhos:0.5, Sphenisciformes:1.0, BovideosSilv:0.1,   Camelideos:0.1   },
+  "Midazolam":           { FelideosSilv:0.3,  Mustelideos:0.5,  Lagartos:1.5, Crocodilianos:1.0, Cervideos:0.3,   Tapiridae:0.2,   Ratitas:0.5,   Anseriformes:1.5, Galliformes:1.5, Tayassuidae:0.4,   Apodiformes:2.0, Anfibios:1.0,  Equideos:0.05,  TestudinesMarinhos:1.5, Sphenisciformes:1.0, BovideosSilv:0.3,   Camelideos:0.3   },
+  "Cetamina":            { FelideosSilv:5,    Mustelideos:8,    Lagartos:15,  Crocodilianos:15,  Cervideos:5,     Tapiridae:3,     Ratitas:10,    Anseriformes:15,  Galliformes:15,  Tayassuidae:10,    Apodiformes:15,  Anfibios:30,   Equideos:2.2,   TestudinesMarinhos:15,  Sphenisciformes:10,  BovideosSilv:4,     Camelideos:5     },
+  "Maropitant":          { FelideosSilv:1.0,  Mustelideos:1.0,  Lagartos:1.0, Crocodilianos:1.0, Cervideos:0,     Tapiridae:0,     Ratitas:1.0,   Anseriformes:1.0, Galliformes:1.0, Tayassuidae:1.0,   Apodiformes:1.0, Anfibios:0,    Equideos:0,     TestudinesMarinhos:1.0, Sphenisciformes:1.0, BovideosSilv:0,     Camelideos:0     },
+  "Furosemida":          { FelideosSilv:1.5,  Mustelideos:2.0,  Lagartos:2.0, Crocodilianos:2.0, Cervideos:2.0,   Tapiridae:1.0,   Ratitas:0.2,   Anseriformes:0.2, Galliformes:0.2, Tayassuidae:2.0,   Apodiformes:0.2, Anfibios:2.0,  Equideos:1.0,   TestudinesMarinhos:2.0, Sphenisciformes:0.2, BovideosSilv:2.0,   Camelideos:2.0   },
+  "Nitenpiram":          { FelideosSilv:1.0,  Mustelideos:1.0,  Lagartos:0,   Crocodilianos:0,   Cervideos:0,     Tapiridae:0,     Ratitas:1.0,   Anseriformes:1.0, Galliformes:1.0, Tayassuidae:1.0,   Apodiformes:1.0, Anfibios:0,    Equideos:0,     TestudinesMarinhos:0,   Sphenisciformes:1.0, BovideosSilv:0,     Camelideos:0     },
+  "Manitol 20%":         { FelideosSilv:500,  Mustelideos:500,  Lagartos:500, Crocodilianos:500, Cervideos:500,   Tapiridae:500,   Ratitas:500,   Anseriformes:500, Galliformes:500, Tayassuidae:500,   Apodiformes:500, Anfibios:0,    Equideos:500,   TestudinesMarinhos:500, Sphenisciformes:500, BovideosSilv:500,   Camelideos:500   },
+  "Vitamina K1":         { FelideosSilv:2.5,  Mustelideos:2.0,  Lagartos:1.0, Crocodilianos:1.0, Cervideos:1.0,   Tapiridae:1.0,   Ratitas:2.0,   Anseriformes:2.5, Galliformes:2.5, Tayassuidae:2.0,   Apodiformes:2.5, Anfibios:1.0,  Equideos:1.0,   TestudinesMarinhos:1.0, Sphenisciformes:2.5, BovideosSilv:1.0,   Camelideos:1.0   },
+  "Carprofeno":          { FelideosSilv:0,    Mustelideos:2.0,  Lagartos:2.0, Crocodilianos:2.0, Cervideos:1.4,   Tapiridae:0.7,   Ratitas:2.0,   Anseriformes:2.0, Galliformes:2.0, Tayassuidae:2.2,   Apodiformes:2.0, Anfibios:0,    Equideos:0.7,   TestudinesMarinhos:2.0, Sphenisciformes:2.0, BovideosSilv:1.4,   Camelideos:1.4   },
+  "Robenacoxibe":        { FelideosSilv:2.0,  Mustelideos:2.0,  Lagartos:0,   Crocodilianos:0,   Cervideos:0,     Tapiridae:0,     Ratitas:0,     Anseriformes:0,   Galliformes:0,   Tayassuidae:2.0,   Apodiformes:0,   Anfibios:0,    Equideos:0,     TestudinesMarinhos:0,   Sphenisciformes:0,   BovideosSilv:0,     Camelideos:0     },
+  "Prednisolona":        { FelideosSilv:1.0,  Mustelideos:1.0,  Lagartos:0,   Crocodilianos:0,   Cervideos:0,     Tapiridae:0,     Ratitas:0,     Anseriformes:0,   Galliformes:0,   Tayassuidae:0.5,   Apodiformes:0,   Anfibios:0,    Equideos:1.0,   TestudinesMarinhos:0,   Sphenisciformes:0,   BovideosSilv:0,     Camelideos:0     },
+  "Dexametasona":        { FelideosSilv:0.15, Mustelideos:0.15, Lagartos:0,   Crocodilianos:0,   Cervideos:0.1,   Tapiridae:0.1,   Ratitas:0,     Anseriformes:0,   Galliformes:0,   Tayassuidae:0.1,   Apodiformes:0,   Anfibios:0,    Equideos:0.05,  TestudinesMarinhos:0,   Sphenisciformes:0,   BovideosSilv:0.1,   Camelideos:0.1   },
+  "Lidocaina 2%":        { FelideosSilv:2.0,  Mustelideos:2.0,  Lagartos:2.0, Crocodilianos:2.0, Cervideos:4.0,   Tapiridae:2.0,   Ratitas:1.5,   Anseriformes:1.5, Galliformes:1.5, Tayassuidae:4.0,   Apodiformes:1.5, Anfibios:0,    Equideos:1.5,   TestudinesMarinhos:2.0, Sphenisciformes:1.5, BovideosSilv:4.0,   Camelideos:4.0   },
+  "Bupivacaina 0,5%":    { FelideosSilv:1.0,  Mustelideos:1.0,  Lagartos:1.0, Crocodilianos:1.0, Cervideos:1.5,   Tapiridae:1.0,   Ratitas:1.0,   Anseriformes:1.0, Galliformes:1.0, Tayassuidae:1.5,   Apodiformes:1.0, Anfibios:0,    Equideos:1.0,   TestudinesMarinhos:1.0, Sphenisciformes:1.0, BovideosSilv:1.5,   Camelideos:1.5   },
+  "Ondansetrona":        { FelideosSilv:0.5,  Mustelideos:0.5,  Lagartos:0.5, Crocodilianos:0.5, Cervideos:0,     Tapiridae:0,     Ratitas:0.5,   Anseriformes:0.5, Galliformes:0.5, Tayassuidae:0.5,   Apodiformes:0.5, Anfibios:0,    Equideos:0,     TestudinesMarinhos:0.5, Sphenisciformes:0.5, BovideosSilv:0,     Camelideos:0     },
+  "Metoclopramida":      { FelideosSilv:0.3,  Mustelideos:0.4,  Lagartos:0.5, Crocodilianos:0.5, Cervideos:0,     Tapiridae:0,     Ratitas:0.5,   Anseriformes:0.5, Galliformes:0.5, Tayassuidae:0.4,   Apodiformes:0.5, Anfibios:0,    Equideos:0,     TestudinesMarinhos:0.5, Sphenisciformes:0.5, BovideosSilv:0,     Camelideos:0     },
+  "Omeprazol":           { FelideosSilv:1.0,  Mustelideos:1.0,  Lagartos:1.0, Crocodilianos:1.0, Cervideos:0,     Tapiridae:2.0,   Ratitas:1.0,   Anseriformes:1.0, Galliformes:1.0, Tayassuidae:1.0,   Apodiformes:1.0, Anfibios:0,    Equideos:4.0,   TestudinesMarinhos:1.0, Sphenisciformes:1.0, BovideosSilv:0,     Camelideos:1.0   },
+  "Sucralfato":          { FelideosSilv:25,   Mustelideos:25,   Lagartos:25,  Crocodilianos:25,  Cervideos:0,     Tapiridae:20,    Ratitas:25,    Anseriformes:25,  Galliformes:25,  Tayassuidae:25,    Apodiformes:25,  Anfibios:0,    Equideos:20,    TestudinesMarinhos:25,  Sphenisciformes:25,  BovideosSilv:0,     Camelideos:20    },
+  "Itraconazol":         { FelideosSilv:10,   Mustelideos:10,   Lagartos:5,   Crocodilianos:5,   Cervideos:0,     Tapiridae:0,     Ratitas:10,    Anseriformes:10,  Galliformes:10,  Tayassuidae:5,     Apodiformes:10,  Anfibios:5,    Equideos:5,     TestudinesMarinhos:5,   Sphenisciformes:10,  BovideosSilv:0,     Camelideos:0     },
+  "Alopurinol":          { FelideosSilv:10,   Mustelideos:10,   Lagartos:20,  Crocodilianos:20,  Cervideos:0,     Tapiridae:0,     Ratitas:15,    Anseriformes:15,  Galliformes:15,  Tayassuidae:10,    Apodiformes:15,  Anfibios:0,    Equideos:0,     TestudinesMarinhos:20,  Sphenisciformes:15,  BovideosSilv:0,     Camelideos:0     },
+  "Ivermectina":         { FelideosSilv:0.2,  Mustelideos:0.2,  Lagartos:0.2, Crocodilianos:0,   Cervideos:0.2,   Tapiridae:0.2,   Ratitas:0.2,   Anseriformes:0.2, Galliformes:0.2, Tayassuidae:0.3,   Apodiformes:0.2, Anfibios:0.2,  Equideos:0.2,   TestudinesMarinhos:0,   Sphenisciformes:0.2, BovideosSilv:0.2,   Camelideos:0.2   },
+  "Fenbendazol":         { FelideosSilv:50,   Mustelideos:50,   Lagartos:50,  Crocodilianos:50,  Cervideos:10,    Tapiridae:10,    Ratitas:15,    Anseriformes:20,  Galliformes:20,  Tayassuidae:10,    Apodiformes:20,  Anfibios:50,   Equideos:10,    TestudinesMarinhos:50,  Sphenisciformes:20,  BovideosSilv:10,    Camelideos:10    },
+  "Sulfametoxazol+Trim": { FelideosSilv:15,   Mustelideos:15,   Lagartos:25,  Crocodilianos:25,  Cervideos:25,    Tapiridae:25,    Ratitas:25,    Anseriformes:30,  Galliformes:30,  Tayassuidae:25,    Apodiformes:30,  Anfibios:25,   Equideos:25,    TestudinesMarinhos:25,  Sphenisciformes:30,  BovideosSilv:25,    Camelideos:25    },
+  "Cefalexina":          { FelideosSilv:22,   Mustelideos:20,   Lagartos:20,  Crocodilianos:20,  Cervideos:0,     Tapiridae:0,     Ratitas:35,    Anseriformes:50,  Galliformes:50,  Tayassuidae:20,    Apodiformes:50,  Anfibios:20,   Equideos:0,     TestudinesMarinhos:20,  Sphenisciformes:50,  BovideosSilv:0,     Camelideos:0     },
+  "Escopolamina":        { FelideosSilv:0.5,  Mustelideos:0.3,  Lagartos:0,   Crocodilianos:0,   Cervideos:0.3,   Tapiridae:0.3,   Ratitas:0,     Anseriformes:0,   Galliformes:0,   Tayassuidae:0.4,   Apodiformes:0,   Anfibios:0,    Equideos:0.3,   TestudinesMarinhos:0,   Sphenisciformes:0,   BovideosSilv:0.3,   Camelideos:0.3   },
+  "Pentabiotico":        { FelideosSilv:30000,Mustelideos:30000,Lagartos:0,   Crocodilianos:0,   Cervideos:30000, Tapiridae:30000, Ratitas:0,     Anseriformes:0,   Galliformes:0,   Tayassuidae:30000, Apodiformes:0,   Anfibios:0,    Equideos:30000, TestudinesMarinhos:0,   Sphenisciformes:0,   BovideosSilv:30000, Camelideos:30000 }
+};
+
+// 7. Faixas Farmacológicas Específicas para Novos Grupos (Perissodáctilos, Ruminantes, Anfíbios, Ratitas, Pinguins)
+(function registrarFaixasNovosGrupos() {
+  const byId = id => FARMACOS_DB.find(f => f.id === id);
+
+  const clinda = byId("Clindamicina");
+  if (clinda) {
+    clinda.faixasPorGrupo.ProibidoPerisso = {
+      opcoes: [0], via: "⛔ PROIBIDO EM EQUÍDEOS E ANTAS!", badge: "⛔ 100% LETAL (Colite Clostridial Necrosante!)", status: "proibido",
+      fontes: [["Plumb's 10ª Ed., p. 265 & Equine Medicine Secrets", "Clindamycin is strictly contraindicated in horses, zebras, and tapirs due to fatal clostridial enterocolitis.", "📖 Conferido na Fonte"]]
+    };
+    clinda.faixasPorGrupo.ProibidoRuminante = {
+      opcoes: [0], via: "⛔ CONTRAINDICADO EM RUMINANTES E CAMELÍDEOS ADULTOS!", badge: "⛔ Destrói Microbiota Ruminal", status: "proibido",
+      fontes: [["Plumb's 10ª Ed. & Cubas (Cap. 51–52)", "Avoid oral lincosamides in adult ruminants and camelids (severe ruminal dysbiosis).", "📖 Conferido na Fonte"]]
+    };
+  }
+
+  const amoxi = byId("Amoxicilina+Clav");
+  if (amoxi) {
+    amoxi.faixasPorGrupo.ProibidoPerisso = {
+      opcoes: [0], via: "⛔ EVITAR VIA ORAL EM EQUÍDEOS E ANTAS ADULTOS (preferir Pentabiótico IM ou SMZ+TMP)!", badge: "⛔ Risco de Colite em Fermentadores Pós-Gástricos", status: "proibido",
+      fontes: [["Plumb's 10ª Ed. & Equine Medicine Secrets", "Oral aminopenicillins disrupt hindgut flora in adult equids and tapirs; use parenteral penicillins or TMS.", "📖 Conferido na Fonte"]]
+    };
+    amoxi.faixasPorGrupo.ProibidoRuminante = {
+      opcoes: [0], via: "⛔ CONTRAINDICADO VIA ORAL EM RUMINANTES ADULTOS (usar Pentabiótico IM ou antibiótico parenteral)!", badge: "⛔ Disbiose Ruminal", status: "proibido",
+      fontes: [["Spinosa 6ª Ed. & Cubas (Cap. 51–52)", "Oral beta-lactams impair ruminal fermentation in adult cervids, bovids, and camelids.", "📖 Conferido na Fonte"]]
+    };
+  }
+
+  const cefal = byId("Cefalexina");
+  if (cefal) {
+    cefal.faixasPorGrupo.ProibidoPerisso = {
+      opcoes: [0], via: "⛔ CONTRAINDICADO VIA ORAL EM EQUÍDEOS E ANTAS!", badge: "⛔ Disbiose Cecocólica", status: "proibido",
+      fontes: [["Plumb's 10ª Ed.", "Oral first-generation cephalosporins have poor bioavailability and high colitis risk in adult equids.", "📖 Conferido na Fonte"]]
+    };
+    cefal.faixasPorGrupo.ProibidoRuminante = {
+      opcoes: [0], via: "⛔ CONTRAINDICADO VIA ORAL EM RUMINANTES ADULTOS!", badge: "⛔ Disbiose Ruminal", status: "proibido",
+      fontes: [["Plumb's 10ª Ed.", "Avoid oral cephalosporins in adult ruminants.", "📖 Conferido na Fonte"]]
+    };
+  }
+
+  const melox = byId("Meloxicam");
+  if (melox) {
+    melox.faixasPorGrupo.Equideos = {
+      opcoes: [0.6], via: "IV ou VO a cada 24h (SID) — Preferencial COX-2 em Equídeos e Antas", badge: "⭐ AINE Seletivo COX-2 em Equídeos/Antas (0,6 mg/kg SID)", status: "seguro",
+      fontes: [["Plumb's 10ª Ed., p. 791 & Equine Medicine Secrets", "Horses & Tapirs: 0.6 mg/kg IV or PO q24h; safer GI/renal profile than phenylbutazone.", "📖 Conferido na Fonte"]]
+    };
+    melox.faixasPorGrupo.Tapiridae = melox.faixasPorGrupo.Equideos;
+    melox.faixasPorGrupo.Cervideos = {
+      opcoes: [0.5, 1.0], via: "IV, SC ou VO a cada 24–48h (Ruminantes/Camelídeos: 0,5 mg/kg)", badge: "⭐ Analgesia/AINE em Ruminantes e Camelídeos", status: "seguro",
+      fontes: [["Plumb's 10ª Ed. & Cubas (Cap. 49–52)", "Ruminants & Camelids: 0.5 mg/kg IV/SC q24–48h (or 1 mg/kg PO).", "📖 Conferido na Fonte"]]
+    };
+    melox.faixasPorGrupo.BovideosSilv = melox.faixasPorGrupo.Cervideos;
+    melox.faixasPorGrupo.Camelideos = melox.faixasPorGrupo.Cervideos;
+    melox.faixasPorGrupo.Ratitas = {
+      opcoes: [0.5, 1.0], via: "IM (coxa!) ou VO q12–24h", badge: "🟢 AINE em Ratitas (IM na coxa!)", status: "seguro",
+      fontes: [["Carpenter 6ª Ed. & Cubas Cap. 18", "Ratites: 0.5–1.0 mg/kg IM (thigh), PO q12–24h.", "📖 Conferido na Fonte"]]
+    };
+    melox.faixasPorGrupo.Anfibios = {
+      opcoes: [0.1, 0.2], via: "IM, ICe ou VO a cada 24h (suspender em hidropsia/doença renal!)", badge: "🟡 AINE em Anfíbios (0,1–0,2 mg/kg)", status: "alerta",
+      fontes: [["Carpenter's Exotic Animal Formulary — 6ª Ed., Cap. Amphibians", "Amphibians: 0.1–0.2 mg/kg IM, ICe, PO q24h.", "📖 Conferido na Fonte"]]
+    };
+  }
+
+  const omep = byId("Omeprazol");
+  if (omep) {
+    omep.faixasPorGrupo.Equideos = {
+      opcoes: [2.0, 4.0], via: "Tratamento EGUS (Úlcera Gástrica Equina): 4 mg/kg VO SID (pasta tamponada) | Prevenção: 1–2 mg/kg SID", badge: "⭐ 1ª Escolha na Úlcera Gástrica Equina (4 mg/kg SID)", status: "seguro",
+      fontes: [["Equine Medicine Secrets & Consenso ECEIM / Plumb's 10ª Ed.", "Equine Gastric Ulcer Syndrome (EGUS): 4 mg/kg PO q24h for 28 days; prevention 1–2 mg/kg q24h.", "📖 Conferido na Fonte"]]
+    };
+  }
+
+  const itra = byId("Itraconazol");
+  if (itra) {
+    itra.faixasPorGrupo.Sphenisciformes = {
+      opcoes: [10, 15], via: "VO (dentro do peixe) q12–24h — Profilaxia e Tratamento da Aspergilose em Pinguins!", badge: "⭐ ESSENCIAL EM PINGUINS (Aspergilose!)", status: "seguro",
+      fontes: [["Cubas Cap. 22 & Carpenter 6ª Ed., p. 258", "Penguins: 10–15 mg/kg PO q12–24h for treatment/prophylaxis of Aspergillosis.", "📖 Conferido na Fonte"]]
+    };
+    itra.faixasPorGrupo.Anfibios = {
+      opcoes: [5, 10], via: "Banho terapêutico 0,01% (100 mg/L em água declorada) por 5 min/dia × 10 dias (Quitridiomicose — Bd) ou 5 mg/kg VO", badge: "⭐ 1ª Escolha na Quitridiomicose (Banho 0,01%!)", status: "seguro",
+      fontes: [["Cubas Cap. 12 & Carpenter 6ª Ed., Cap. Amphibians", "Chytridiomycosis (Batrachochytrium dendrobatidis): 0.01% itraconazole bath 5 min q24h for 10 days.", "📖 Conferido na Fonte"]]
+    };
+  }
+
+  const iverm = byId("Ivermectina");
+  if (iverm) {
+    iverm.faixasPorGrupo.Crocodilianos = {
+      opcoes: [0], via: "⛔ EVITAR EM CROCODILIANOS (relatos de neurotoxicidade/paresia — usar Fenbendazol 50 mg/kg!)", badge: "⛔ Evitar em Crocodylia", status: "proibido",
+      fontes: [["Carpenter's Exotic Animal Formulary — 6ª Ed., p. 117", "Avoid ivermectin in crocodilians due to neurologic toxicity; use fenbendazole.", "📖 Conferido na Fonte"]]
+    };
+  }
+
+  const penta = byId("Pentabiotico");
+  if (penta) {
+    penta.faixasPorGrupo.Equideos = {
+      opcoes: [22000, 30000, 40000], via: "IM PROFUNDA (dividir máx 15–20 mL por ponto; ASPIRAR ANTES — PROIBIDO IV!) q48–72h", badge: "⭐ 1ª Escolha de Campo em Equídeos/Ungulados (IM Profunda!)", status: "seguro",
+      fontes: [["Spinosa 6ª Ed., p. 466 & Equine Medicine Secrets", "Equids & Ungulates: 22,000–40,000 IU/kg deep IM q48–72h. Strictly contraindicated IV.", "📖 Conferido na Fonte"]]
+    };
+    penta.faixasPorGrupo.Cervideos = penta.faixasPorGrupo.Equideos;
+    penta.faixasPorGrupo.Tapiridae = penta.faixasPorGrupo.Equideos;
+    penta.faixasPorGrupo.BovideosSilv = penta.faixasPorGrupo.Equideos;
+    penta.faixasPorGrupo.Camelideos = penta.faixasPorGrupo.Equideos;
+  }
+})();
+
+// 8. Sincronização Automática Universal: garante f.dosesPorId[t.id] E f.dosesPadrao[tIdx] 100% alinhados (38 táxons!)
+(function sincronizarMatrizDosesPorId() {
+  FARMACOS_DB.forEach(f => {
+    const mapa = {};
+    // Preserva as 21 doses originais mapeadas pelo ID de cada táxon (0..20)
+    for (let i = 0; i < 21 && i < TAXONS_DB.length; i++) {
+      const tid = TAXONS_DB[i].id;
+      mapa[tid] = f.dosesPadrao[i] !== undefined ? f.dosesPadrao[i] : f.dosesPadrao[0];
+    }
+    // Mescla as 17 novas doses nominais
+    const extras = NOVAS_DOSES_POR_FARMACO[f.id] || {};
+    for (let i = 21; i < TAXONS_DB.length; i++) {
+      const tid = TAXONS_DB[i].id;
+      mapa[tid] = extras[tid] !== undefined ? extras[tid] : 0;
+    }
+    f.dosesPorId = mapa;
+    // Reconstrói dosesPadrao com comprimento exato = TAXONS_DB.length (38)
+    f.dosesPadrao = TAXONS_DB.map(t => mapa[t.id]);
+  });
+})();

@@ -1,4 +1,4 @@
-const CACHE_NAME = "vetcore-pro-v4";
+const CACHE_NAME = "vetcore-pro-v7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -37,13 +37,18 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
+  // Stale-While-Revalidate: resposta instantânea do cache + atualização silenciosa em segundo plano
   e.respondWith(
-    fetch(e.request)
-      .then((res) => {
-        const resClone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
-        return res;
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.match(e.request).then((cached) => {
+        const netFetch = fetch(e.request)
+          .then((res) => {
+            if (res && res.status === 200) cache.put(e.request, res.clone());
+            return res;
+          })
+          .catch(() => cached);
+        return cached || netFetch;
       })
-      .catch(() => caches.match(e.request))
+    )
   );
 });

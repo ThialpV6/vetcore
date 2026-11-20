@@ -9,6 +9,10 @@ const KEY_LIVROS_USR = "vetcore_livros_custom_v2";
 const KEY_EMITENTE   = "vetcore_emitente_v2";
 const KEY_DRIVE_URL  = "vetcore_drive_pdfs_url";
 const KEY_THEME      = "vetcore_theme_v1";
+const KEY_DRAFT      = "vetcore_draft_v1";
+const KEY_AUTH_EMAIL = "vetcore_last_email_v1";
+const KEY_AUTH_PERS  = "vetcore_auth_persist_v1";
+const KEY_AUTH_HINT  = "vetcore_auth_hint_v1";
 
 const VETCORE_CLOUD_CONFIG = {
   aiWorkerEndpoint: "https://vetcore-ia.jp-resende-po.workers.dev",
@@ -39,6 +43,39 @@ let fichaFiltroStatus = "todos";
 let pacientesSalvos = JSON.parse(localStorage.getItem(KEY_PACIENTES) || "[]");
 let firebaseUserAtual = null;
 let firestoreDb = null;
+let firebaseInicializado = false;
+
+// Estado de navegação ativa e flags de renderização sob demanda (Lazy Rendering)
+let abaAtiva = "prontuario";
+let subProntuarioAtiva = "resumo";
+let subCalcAtiva = "doses";
+let subFontesAtiva = "bulario";
+let receitaEditadaManual = false;
+let restaurandoEstado = false;
+
+const dirtyViews = {
+  resumo: true,
+  clinico: true,
+  ia: true,
+  prescricao: true,
+  receitas: true,
+  calc_doses: true,
+  calc_cri: true,
+  calc_sedacao: true,
+  calc_eutanasia: true,
+  emergencia: true,
+  bulario: true,
+  livros: true
+};
+
+// Timers de debounce (zero engasgos ao digitar no celular)
+let _timerAutoSave = null;
+let _timerCloudSync = null;
+let _timerAnam = null;
+let _timerBuscaPresc = null;
+let _timerBuscaBul = null;
+let _timerBuscaLiv = null;
+let _timerBuscaGlobal = null;
 
 // Carregar Sinais e Livros Customizados do Usuário
 try {
@@ -118,23 +155,82 @@ function corSemanticaClasse(cor) {
 // INICIALIZAÇÃO ÚNICA & FIREBASE AUTH/FIRESTORE
 // ============================================================================
 
+function prepararIndicesBusca() {
+  FARMACOS_DB.forEach(f => {
+    const cls = (typeof MONOGRAFIAS_EXTRA !== "undefined" && MONOGRAFIAS_EXTRA[f.id]?.classe)
+      || (typeof CLASSES_PADRAO_FARMACO !== "undefined" && CLASSES_PADRAO_FARMACO[f.id]) || "";
+    f._idx = normalizarTextoBusca(f.nome + " " + f.comercial + " " + f.id + " " + cls);
+    f._idxFull = normalizarTextoBusca(f.nome + " " + f.comercial + " " + f.resumoBulario + " " + cls);
+  });
+  TAXONS_DB.forEach(t => {
+    const subs = (t.subespecies || []).map(s => s.nome).join(" ");
+    t._idx = normalizarTextoBusca(t.nome + " " + t.grupo + " " + subs);
+  });
+  CATALOGO_LIVROS.forEach(l => {
+    l._idx = normalizarTextoBusca(l.titulo + " " + l.autores + " " + l.area + " " + l.resumo);
+  });
+  Object.values(SINAIS_DB).forEach(s => {
+    s._palavrasNorm = (s.palavras || []).map(p => normalizarTextoBusca(p));
+  });
+}
+
 function initFirebaseVetCore() {
+  if (firebaseInicializado) return;
   try {
     if (typeof firebase === "undefined" || !VETCORE_CLOUD_CONFIG.firebaseConfig.apiKey) return;
+    firebaseInicializado = true;
     if (!firebase.apps.length) {
       firebase.initializeApp(VETCORE_CLOUD_CONFIG.firebaseConfig);
     }
     firestoreDb = firebase.firestore();
+
+    // Garante persistência explícita escolhida pelo usuário (LOCAL por padrão)
+    const modoPers = localStorage.getItem(KEY_AUTH_PERS) === "session"
+      ? firebase.auth.Auth.Persistence.SESSION
+      : firebase.auth.Auth.Persistence.LOCAL;
+    firebase.auth().setPersistence(modoPers).catch(() => {});
+
     firebase.auth().onAuthStateChanged(async (user) => {
       firebaseUserAtual = user || null;
-      atualizarUIConta(firebaseUserAtual);
-      if (user) await baixarDadosDaNuvem(user.uid);
+      if (user) {
+        const hint = {
+          displayName: user.displayName || (user.email ? user.email.split("@")[0] : "Conectado"),
+          email: user.email || ""
+        };
+        if (localStorage.getItem(KEY_AUTH_PERS) !== "session") {
+          localStorage.setItem(KEY_AUTH_HINT, JSON.stringify(hint));
+          if (user.email) localStorage.setItem(KEY_AUTH_EMAIL, user.email);
+        }
+        atualizarUIConta(user);
+        await baixarDadosDaNuvem(user.uid);
+      } else {
+        localStorage.removeItem(KEY_AUTH_HINT);
+        atualizarUIConta(null);
+      }
     });
-  } catch (e) {}
+  } catch (e) {
+    firebaseInicializado = false;
+  }
 }
 
 function initVetCore() {
   aplicarTema(localStorage.getItem(KEY_THEME) || "dark");
+  prepararIndicesBusca();
+
+  // Pré-preencher último e-mail e preferência "Manter conectado"
+  const ultimoEmail = localStorage.getItem(KEY_AUTH_EMAIL) || "";
+  const elAuthEmail = document.getElementById("auth-email");
+  if (elAuthEmail && ultimoEmail) elAuthEmail.value = ultimoEmail;
+  const elManter = document.getElementById("auth-manter");
+  if (elManter) elManter.checked = localStorage.getItem(KEY_AUTH_PERS) !== "session";
+
+  // Mostra estado conectado imediato em modo offline/boot antes do Firebase responder
+  try {
+    const hint = JSON.parse(localStorage.getItem(KEY_AUTH_HINT) || "null");
+    if (hint && localStorage.getItem(KEY_AUTH_PERS) !== "session") {
+      atualizarUIConta(hint);
+    }
+  } catch (e) {}
 
   const selTax = document.getElementById("g-tax");
   if (selTax) {
@@ -151,13 +247,14 @@ function initVetCore() {
   popularPillsCalculadoras();
   popularPresetsUI();
   atualizarListaPacientesSalvos();
-  trocarGrupoTaxonomico();
-  renderBularioCompleto();
-  renderCatalogoLivros();
-  calcularMCGS();
-  calcularFGS();
-  calcularCMPS();
-  converterUIUniversal();
+
+  // Tenta restaurar rascunho em andamento (proteção contra kill em segundo plano no Android)
+  const restaurou = restaurarRascunhoSessao();
+  if (!restaurou) {
+    trocarGrupoTaxonomico();
+  }
+
+  configurarAutoSaveEBackground();
   initFirebaseVetCore();
 }
 
@@ -165,22 +262,88 @@ function initVetCore() {
 // NAVEGAÇÃO, SHEETS & BUSCA GLOBAL (COMMAND BAR)
 // ============================================================================
 
+function marcarViewsSujas(lista) {
+  if (!lista) {
+    Object.keys(dirtyViews).forEach(k => { dirtyViews[k] = true; });
+    return;
+  }
+  lista.forEach(k => { dirtyViews[k] = true; });
+}
+
+function renderizarAbaVisivel() {
+  if (abaAtiva === "prontuario") {
+    if (subProntuarioAtiva === "resumo" && dirtyViews.resumo) {
+      recalcularProntuario();
+      dirtyViews.resumo = false;
+    } else if (subProntuarioAtiva === "clinico" && dirtyViews.clinico) {
+      recalcularProntuario();
+      avaliarExamesLab();
+      atualizarAlertasEscalasTaxon();
+      calcularMCGS();
+      calcularFGS();
+      calcularCMPS();
+      dirtyViews.clinico = false;
+    } else if (subProntuarioAtiva === "ia" && dirtyViews.ia) {
+      recalcularProntuario();
+      atualizarResumoContextoIA();
+      dirtyViews.ia = false;
+    } else if (subProntuarioAtiva === "prescricao" && dirtyViews.prescricao) {
+      renderListaPrescricaoFiltrada();
+      dirtyViews.prescricao = false;
+    }
+  } else if (abaAtiva === "receitas" && dirtyViews.receitas) {
+    preencherConversorReceita();
+    if (!receitaEditadaManual) atualizarFolhaReceita();
+    dirtyViews.receitas = false;
+  } else if (abaAtiva === "calc") {
+    if (subCalcAtiva === "doses" && dirtyViews.calc_doses) {
+      calcularDoseIsolada();
+      calcularDoseUI();
+      converterUIUniversal();
+      dirtyViews.calc_doses = false;
+    } else if (subCalcAtiva === "cri" && dirtyViews.calc_cri) {
+      calcularCRI();
+      renderBombasCombinadas();
+      dirtyViews.calc_cri = false;
+    } else if ((subCalcAtiva === "sedacao" && dirtyViews.calc_sedacao) || (subCalcAtiva === "eutanasia" && dirtyViews.calc_eutanasia)) {
+      renderProtocolosEspecie();
+      dirtyViews.calc_sedacao = false;
+      dirtyViews.calc_eutanasia = false;
+    }
+  } else if (abaAtiva === "emergencia" && dirtyViews.emergencia) {
+    renderPainelEmergencia();
+    dirtyViews.emergencia = false;
+  } else if (abaAtiva === "fontes") {
+    if (subFontesAtiva === "bulario" && dirtyViews.bulario) {
+      renderBularioCompleto();
+      dirtyViews.bulario = false;
+    } else if (subFontesAtiva === "livros" && dirtyViews.livros) {
+      renderCatalogoLivros();
+      dirtyViews.livros = false;
+    }
+  }
+}
+
 function mudarAba(aba) {
+  abaAtiva = aba;
   document.querySelectorAll(".tab-view").forEach(s => s.classList.add("hidden"));
   document.getElementById(`tab-${aba}`)?.classList.remove("hidden");
   document.querySelectorAll(".nav-btn").forEach(b => {
     b.classList.toggle("active", b.dataset.target === aba);
   });
+  renderizarAbaVisivel();
+  if (!restaurandoEstado) agendarAutoSave();
   window.scrollTo(0, 0);
 }
 
 function alternarSubProntuario(qual) {
+  subProntuarioAtiva = qual;
   ["resumo", "clinico", "ia", "prescricao"].forEach(k => {
     document.getElementById(`subp-${k}`)?.classList.toggle("hidden", k !== qual);
     document.getElementById(`subp-btn-${k}`)?.classList.toggle("active", k === qual);
   });
-  if (qual === "ia") atualizarResumoContextoIA();
-  if (qual === "prescricao") renderListaPrescricaoFiltrada();
+  renderizarAbaVisivel();
+  if (!restaurandoEstado) agendarAutoSave();
   window.scrollTo(0, 0);
 }
 
@@ -236,7 +399,7 @@ function executarBuscaGlobal() {
 
   // 2. Fármacos
   FARMACOS_DB.forEach((f, idx) => {
-    if (termo && normalizarTextoBusca(f.nome + " " + f.comercial + " " + f.id).includes(termo)) {
+    if (termo && (f._idx || normalizarTextoBusca(f.nome + " " + f.comercial + " " + f.id)).includes(termo)) {
       resultados.push({
         titulo: f.nome,
         sub: f.comercial,
@@ -248,8 +411,7 @@ function executarBuscaGlobal() {
 
   // 3. Táxons e Subespécies
   TAXONS_DB.forEach((t, tIdx) => {
-    const subsTxt = (t.subespecies || []).map(s => s.nome).join(" ");
-    if (termo && normalizarTextoBusca(t.nome + " " + t.grupo + " " + subsTxt).includes(termo)) {
+    if (termo && (t._idx || normalizarTextoBusca(t.nome + " " + t.grupo)).includes(termo)) {
       resultados.push({
         titulo: limparEmoji(t.nome),
         sub: `Trocar espécie ativa (${t.grupo})`,
@@ -335,19 +497,30 @@ function getTaxonAtual() {
 }
 
 function getGuiaSemiologico(t) {
+  if (t.grupo.includes("Anfíbios") && GUIAS_SEMIOLOGICOS.padraoAnfibios) return GUIAS_SEMIOLOGICOS.padraoAnfibios;
   if (t.grupo.includes("Aves")) return GUIAS_SEMIOLOGICOS.padraoAves;
   if (t.grupo.includes("Répteis")) return GUIAS_SEMIOLOGICOS.padraoRepteis;
   return GUIAS_SEMIOLOGICOS.padraoMamiferos;
 }
 
 function getConfigFarmacoParaTaxon(f, tIdx, t) {
-  const dosePadrao = f.dosesPadrao[tIdx] !== undefined ? f.dosesPadrao[tIdx] : f.dosesPadrao[0];
+  const dosePadrao = (f.dosesPorId && f.dosesPorId[t.id] !== undefined)
+    ? f.dosesPorId[t.id]
+    : (f.dosesPadrao[tIdx] !== undefined ? f.dosesPadrao[tIdx] : f.dosesPadrao[0]);
   let grupoCfg = f.faixasPorGrupo.Padrao;
 
   if (f.faixasPorGrupo[t.id]) {
     grupoCfg = f.faixasPorGrupo[t.id];
+  } else if (t.id === "FelideosSilv" && f.faixasPorGrupo.Gato) {
+    grupoCfg = f.faixasPorGrupo.Gato;
+  } else if (t.id === "TestudinesMarinhos" && f.faixasPorGrupo.Testudines) {
+    grupoCfg = f.faixasPorGrupo.Testudines;
   } else if ((t.id === "Coelhos" || t.id === "Caviomorfos" || t.id === "Miomorfos") && dosePadrao === 0 && f.faixasPorGrupo.ProibidoCeco) {
     grupoCfg = f.faixasPorGrupo.ProibidoCeco;
+  } else if ((t.id === "Equideos" || t.id === "Tapiridae") && dosePadrao === 0 && f.faixasPorGrupo.ProibidoPerisso) {
+    grupoCfg = f.faixasPorGrupo.ProibidoPerisso;
+  } else if ((t.id === "Cervideos" || t.id === "BovideosSilv" || t.id === "Camelideos") && dosePadrao === 0 && f.faixasPorGrupo.ProibidoRuminante) {
+    grupoCfg = f.faixasPorGrupo.ProibidoRuminante;
   } else if (t.grupo.includes("Aves") && f.faixasPorGrupo.Aves) {
     grupoCfg = f.faixasPorGrupo.Aves;
   } else if (t.id === "Caviomorfos" && f.faixasPorGrupo.Coelhos) {
@@ -445,18 +618,12 @@ function atualizarPillCabecalho() {
 
 function atualizarPesoGlobal() {
   atualizarPillCabecalho();
-  recalcularProntuario();
-  avaliarExamesLab();
-  atualizarAlertasEscalasTaxon();
-  atualizarResumoContextoIA();
-  calcularDoseIsolada();
-  calcularDoseUI();
-  calcularCRI();
-  renderBombasCombinadas();
-  renderProtocolosEspecie();
-  renderPainelEmergencia();
-  preencherConversorReceita();
-  sincronizarCabecalhoReceita();
+  marcarViewsSujas([
+    "resumo", "clinico", "ia", "prescricao", "receitas",
+    "calc_doses", "calc_cri", "calc_sedacao", "calc_eutanasia", "emergencia"
+  ]);
+  renderizarAbaVisivel();
+  if (!restaurandoEstado) agendarAutoSave();
 }
 
 // ============================================================================
@@ -464,16 +631,21 @@ function atualizarPesoGlobal() {
 // ============================================================================
 
 function analisarTextoAnamnese() {
-  const txt = (document.getElementById("p-anam")?.value || "").toLowerCase();
-  let mudou = false;
-  Object.keys(SINAIS_DB).forEach(k => {
-    if (SINAIS_DB[k].palavras.some(p => txt.includes(p)) && !sinaisAtivos.has(k)) {
-      sinaisAtivos.add(k);
-      mudou = true;
-      if (k === "ascite" && pesoMagroManual <= 0) pesoMagroManual = +(getPesoBrutoKg() * 0.85).toFixed(2);
-    }
-  });
-  if (mudou) atualizarPesoGlobal();
+  clearTimeout(_timerAnam);
+  _timerAnam = setTimeout(() => {
+    const txt = normalizarTextoBusca(document.getElementById("p-anam")?.value || "");
+    if (!txt) return;
+    let mudou = false;
+    Object.keys(SINAIS_DB).forEach(k => {
+      const palavras = SINAIS_DB[k]._palavrasNorm || SINAIS_DB[k].palavras || [];
+      if (palavras.some(p => txt.includes(p)) && !sinaisAtivos.has(k)) {
+        sinaisAtivos.add(k);
+        mudou = true;
+        if (k === "ascite" && pesoMagroManual <= 0) pesoMagroManual = +(getPesoBrutoKg() * 0.85).toFixed(2);
+      }
+    });
+    if (mudou) atualizarPesoGlobal();
+  }, 220);
 }
 
 function toggleSinal(k) {
@@ -634,8 +806,13 @@ function recalcularProntuario() {
     }
   }
 
-  // 5. Render Prescrição Filtrada (uma única passagem limpa!)
-  renderListaPrescricaoFiltrada();
+  // 5. Render Prescrição apenas se a sub-aba Prescrição estiver visível
+  if (abaAtiva === "prontuario" && subProntuarioAtiva === "prescricao") {
+    renderListaPrescricaoFiltrada();
+    dirtyViews.prescricao = false;
+  } else {
+    dirtyViews.prescricao = true;
+  }
 }
 
 // ============================================================================
@@ -706,7 +883,7 @@ function renderListaPrescricaoFiltrada() {
       (filtroPrescAtivo === "caso" ? focoDrogas.has(f.id) : cats.includes(filtroPrescAtivo));
     if (!passaCat) return false;
     if (!termo) return true;
-    return normalizarTextoBusca(f.nome + " " + f.comercial + " " + f.id).includes(termo);
+    return (f._idx || normalizarTextoBusca(f.nome + " " + f.comercial + " " + f.id)).includes(termo);
   });
 
   if (contEl) {
@@ -759,7 +936,7 @@ function renderListaPrescricaoFiltrada() {
       ? "vc-accent-left-warn"
       : (isFoco ? "vc-accent-left-accent" : "");
 
-    return `<div onclick="abrirModalFarmaco(${fIdx})" class="vc-card-interactive p-3 ${bordaLeft} flex justify-between items-center gap-3">
+    return `<div onclick="abrirModalFarmaco(${fIdx})" class="vc-card-interactive vc-perf-item p-3 ${bordaLeft} flex justify-between items-center gap-3">
       <div class="min-w-0 space-y-1">
         <div class="flex flex-wrap items-center gap-1.5">
           ${isFoco ? '<span class="vc-badge vc-badge-accent">Do Caso</span>' : ""}
@@ -857,6 +1034,12 @@ function atualizarAlertasEscalasTaxon() {
   if (t.grupo.includes("Aves") || t.grupo.includes("Répteis")) {
     alertaEl.classList.remove("hidden");
     alertaEl.innerHTML = `<strong>Alerta em ${escapeHtml(nome)}:</strong> A íris possui musculatura estriada voluntária — o reflexo pupilar à luz (RPL) pode ser falseado e não deve ser interpretado isoladamente como lesão de tronco.`;
+  } else if (t.grupo.includes("Anfíbios")) {
+    alertaEl.classList.remove("hidden");
+    alertaEl.innerHTML = `<strong>Alerta em ${escapeHtml(nome)}:</strong> A MCGS não é validada em anfíbios; avaliar reflexo de endireitamento, retração corneal/palpebral e respiração bucal em água declorada na POTZ.`;
+  } else if (t.id === "Apodiformes") {
+    alertaEl.classList.remove("hidden");
+    alertaEl.innerHTML = `<strong>Alerta em ${escapeHtml(nome)}:</strong> Diferenciar coma/estupor de torpor noturno fisiológico (18–25 °C) ou hipoglicemia aguda (fornecer néctar 20% antes de fechar o prognóstico).`;
   } else if (t.id === "Gamba" || t.id === "Tamandua" || t.id === "Tatu") {
     alertaEl.classList.remove("hidden");
     alertaEl.innerHTML = `<strong>Alerta em ${escapeHtml(nome)}:</strong> Diferenciar estupor neurológico de basotermia fisiológica ou tanatose (confirmar temperatura corporal antes de fechar o escore).`;
@@ -1017,22 +1200,67 @@ Exames objetivos e priorizados para diferenciar as hipóteses acima.
 Interações, contraindicações cruzadas ou ajustes de dose específicos para este quadro (não invente números de página de livros).`
     : `Extraia do texto abaixo todas as doses farmacológicas, vias, frequências e alertas por espécie de forma organizada e limpa:\n\n"${document.getElementById("ia-input-livro")?.value || ""}"`;
 
+  // Query enxuta e de alto sinal para busca semântica multilíngue no Cloudflare Vectorize
+  const partesRag = [
+    `${limparEmoji(t.nome)} (${sub.nome})`,
+    achadosLista !== "Nenhum marcado" ? `Achados: ${achadosLista}` : "",
+    document.getElementById("p-diagnostico")?.value?.trim() ? `Suspeita: ${document.getElementById("p-diagnostico").value.trim()}` : "",
+    document.getElementById("p-anam")?.value?.trim() ? `Anamnese: ${document.getElementById("p-anam").value.trim().slice(0, 320)}` : "",
+    document.getElementById("p-exame-fisico")?.value?.trim() ? `Exame: ${document.getElementById("p-exame-fisico").value.trim().slice(0, 220)}` : "",
+    (ht !== "-" || ppt !== "-" || glic !== "-" || ren !== "-" || hep !== "-")
+      ? `Lab: Ht ${ht}% PPT ${ppt} Glic ${glic} ${ref.renalNome} ${ren} ${ref.hepNome} ${hep}`
+      : ""
+  ].filter(Boolean);
+  const consultaRag = partesRag.join(" | ");
+
   try {
     const r = await fetch(VETCORE_CLOUD_CONFIG.aiWorkerEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: promptCompleto })
+      body: JSON.stringify({
+        prompt: promptCompleto,
+        consultaRag,
+        taxon: limparEmoji(t.nome),
+        modo
+      })
     });
     const j = await r.json();
 
     if (r.ok && j.texto && !j.texto.startsWith("Erro da API Gemini") && !j.texto.startsWith("Falha interna")) {
+      const citacoes = Array.isArray(j.citacoes) ? j.citacoes : [];
+      const usouAcervo = j.modoRag === "acervo" && citacoes.length > 0;
+      const badgeFonte = usouAcervo
+        ? `<span class="vc-badge vc-badge-ok">Acervo RAG (${citacoes.length} trechos)</span>`
+        : `<span class="vc-badge vc-badge-info">IA Geral (sem trecho no acervo)</span>`;
+
+      const blocoCitacoes = usouAcervo ? `
+        <details class="vc-subcard !p-0 overflow-hidden mt-3">
+          <summary class="px-3 py-2.5 text-[11px] font-bold vc-accent-text cursor-pointer select-none flex items-center justify-between gap-2">
+            <span>Trechos consultados no seu acervo (${citacoes.length})</span>
+            <span class="vc-muted font-normal">Expandir</span>
+          </summary>
+          <div class="px-3 pb-3 pt-2 border-t vc-divider space-y-2">
+            ${citacoes.map((c, idx) => `
+              <div class="p-2.5 rounded-lg space-y-1" style="background:var(--bg-surface);border:1px solid var(--border-subtle)">
+                <div class="flex flex-wrap items-center justify-between gap-1.5">
+                  <strong class="text-[11px] vc-warn-text">${idx + 1}. ${escapeHtml(c.livro)} (p. ${escapeHtml(c.pagina)})</strong>
+                  ${c.score ? `<span class="vc-badge vc-badge-neutral mono">${Math.round(c.score * 100)}% relev.</span>` : ""}
+                </div>
+                <blockquote class="text-[11px] vc-secondary italic pl-2 border-l-2 leading-relaxed" style="border-color:var(--accent)">"${escapeHtml((c.trecho || "").slice(0, 420))}${(c.trecho || "").length > 420 ? "..." : ""}"</blockquote>
+              </div>
+            `).join("")}
+          </div>
+        </details>
+      ` : "";
+
       boxResp.innerHTML = `
         <div class="vc-subcard p-4 vc-accent-left-accent space-y-2.5 text-xs vc-secondary leading-relaxed">
-          <div class="flex items-center justify-between pb-2 border-b vc-divider">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b vc-divider">
             <strong class="vc-accent-text">Análise Clínica Integrada — ${escapeHtml(limparEmoji(t.nome))}</strong>
-            <span class="vc-badge vc-badge-ok">IA Online</span>
+            ${badgeFonte}
           </div>
           <div>${formatarMarkdownIA(j.texto)}</div>
+          ${blocoCitacoes}
         </div>
       `;
       return;
@@ -1293,14 +1521,18 @@ function adicionarItemNaReceita() {
   if (!nome || !pos) return showToast("Preencha o medicamento e a posologia.", "warn");
 
   itensReceitaAtual.push({ via, nome, uso, emb, pos, obs });
+  receitaEditadaManual = false;
   document.getElementById("rec-obs-italico").value = "";
   atualizarFolhaReceita();
+  agendarAutoSave();
   showToast("Item adicionado à receita.", "ok");
 }
 
 function limparItensReceita() {
   itensReceitaAtual = [];
+  receitaEditadaManual = false;
   atualizarFolhaReceita();
+  agendarAutoSave();
   showToast("Itens da receita limpos.", "info");
 }
 
@@ -1315,11 +1547,17 @@ function salvarEmitente() {
 }
 
 function sincronizarCabecalhoReceita() {
-  atualizarFolhaReceita();
+  if (abaAtiva === "receitas" && !receitaEditadaManual) {
+    atualizarFolhaReceita();
+    dirtyViews.receitas = false;
+  } else {
+    dirtyViews.receitas = true;
+  }
 }
 
 function alternarModoDocumento(modo) {
   modoDocAtual = modo;
+  receitaEditadaManual = false;
   ["receita", "alta", "encam"].forEach(k => {
     document.getElementById(`btn-doc-${k}`)?.classList.toggle("active", k === modo);
   });
@@ -1470,6 +1708,7 @@ function salvarPacienteAtual() {
 
   pac.nome = nome;
   pac.tIdx = tIdx;
+  pac.tId = t.id;
   pac.subIdx = subIdx;
   pac.peso = document.getElementById("g-peso")?.value || "1";
   pac.unid = unidPeso;
@@ -1514,7 +1753,10 @@ function salvarPacienteAtual() {
     resumo: `Peso: ${pac.peso} ${pac.unid} | T: ${pac.temp}°C | Suspeita: ${pac.diag || "Em investigação"}${labResumo ? " | Lab: " + labResumo : ""}`
   });
 
+  pac.updatedAt = Date.now();
+  pac.itensReceita = itensReceitaAtual.slice();
   localStorage.setItem(KEY_PACIENTES, JSON.stringify(pacientesSalvos));
+  salvarRascunhoAgora(true);
   atualizarListaPacientesSalvos();
   renderTimelinePaciente(pac);
   sincronizarParaNuvem();
@@ -1551,7 +1793,8 @@ function carregarPacienteSalvo(id) {
   const pac = pacientesSalvos.find(p => p.id === id);
   if (!pac) return;
   pacienteAtualId = pac.id;
-  document.getElementById("g-tax").value = String(pac.tIdx || 0);
+  const idxResolvido = pac.tId ? TAXONS_DB.findIndex(x => x.id === pac.tId) : -1;
+  document.getElementById("g-tax").value = String(idxResolvido >= 0 ? idxResolvido : (pac.tIdx || 0));
   trocarGrupoTaxonomico();
   document.getElementById("g-subesp").value = String(pac.subIdx || 0);
   unidPeso = pac.unid || "kg";
@@ -1574,8 +1817,11 @@ function carregarPacienteSalvo(id) {
   });
 
   sinaisAtivos = new Set(pac.sinais || []);
+  itensReceitaAtual = Array.isArray(pac.itensReceita) ? pac.itensReceita.slice() : [];
+  receitaEditadaManual = false;
   atualizarPesoGlobal();
   renderTimelinePaciente(pac);
+  salvarRascunhoAgora(true);
   fecharSheetPaciente();
   showToast(`Paciente "${pac.nome}" carregado.`, "info");
 }
@@ -1589,6 +1835,9 @@ function novoPacienteLimpo() {
   });
   sinaisAtivos.clear();
   itensReceitaAtual = [];
+  receitaEditadaManual = false;
+  localStorage.removeItem(KEY_DRAFT);
+  atualizarIndicadorAutoSave(false);
   const iaBox = document.getElementById("ia-resposta-caso");
   if (iaBox) { iaBox.innerHTML = ""; iaBox.classList.add("hidden"); }
   atualizarListaPacientesSalvos();
@@ -1645,10 +1894,13 @@ DIAGNÓSTICO / SUSPEITA: ${document.getElementById("p-diagnostico")?.value}`;
 // ============================================================================
 
 function alternarSubCalc(qual) {
+  subCalcAtiva = qual;
   ["doses", "cri", "sedacao", "eutanasia"].forEach(k => {
     document.getElementById(`subcalc-${k}`)?.classList.toggle("hidden", k !== qual);
     document.getElementById(`subbtn-${k}`)?.classList.toggle("active", k === qual);
   });
+  renderizarAbaVisivel();
+  if (!restaurandoEstado) agendarAutoSave();
 }
 
 function popularPillsCalculadoras() {
@@ -1889,7 +2141,7 @@ function renderBombasCombinadas() {
   const mlh   = parseFloat(document.getElementById("cr-mlh")?.value) || 10;
   const bolsa = parseFloat(document.getElementById("cr-bolsa")?.value) || 100;
   const horas = mlh > 0 ? (bolsa / mlh) : 0;
-  const isGato = t.id === "Gato" || (t.id === "CarnivorosSilv" && document.getElementById("g-subesp")?.value === "1");
+  const isGato = t.id === "Gato" || t.id === "FelideosSilv";
 
   const isMLK = tipoBombaComb === "MLK";
   const nomeOpioide = isMLK ? "Metadona (10 mg/mL — 0,1 mg/kg/h)" : "Fentanil (0,05 mg/mL — 3 µg/kg/h)";
@@ -1971,8 +2223,10 @@ function renderProtocolosEspecie() {
               <strong class="vc-accent-text mono text-right">${formatarVolumeSeguro(ml)}</strong>
             </div>`;
           }).join("");
-          const alertaDiv = (t.grupo.includes("Aves") && volTotal > 0.35)
-            ? `<div class="vc-alert vc-alert-warn !py-2">Volume IM (${volTotal.toFixed(2)} mL): dividir ${(volTotal / 2).toFixed(2)} mL em cada lado do peitoral.</div>` : "";
+          const alertaDiv = t.id === "Ratitas"
+            ? `<div class="vc-alert vc-alert-warn !py-2">Ratitas não possuem quilha esternal: aplicar IM exclusivamente na musculatura da coxa (ílio-tibial), dividindo se > 5–10 mL.</div>`
+            : ((t.grupo.includes("Aves") && volTotal > 0.35)
+              ? `<div class="vc-alert vc-alert-warn !py-2">Volume IM (${volTotal.toFixed(2)} mL): dividir ${(volTotal / 2).toFixed(2)} mL em cada lado do peitoral.</div>` : "");
           return `<div class="vc-subcard p-3.5 space-y-2">
             <div class="font-bold text-xs vc-text">${escapeHtml(s.nome)}</div>
             <div>${linhas}</div>
@@ -2029,7 +2283,9 @@ function renderPainelEmergencia() {
   const g  = kg * 1000;
   const isAve = t.grupo.includes("Aves");
   const isRep = t.grupo.includes("Répteis");
-  const semCuff = isAve || isRep || t.id === "Coelhos" || t.id === "Caviomorfos";
+  const isAnf = t.grupo.includes("Anfíbios");
+  const isFelino = t.id === "Gato" || t.id === "FelideosSilv";
+  const semCuff = isAve || isRep || isAnf || t.id === "Coelhos" || t.id === "Caviomorfos";
   const nomeEsp = limparEmoji(t.nome);
 
   // Materiais
@@ -2037,10 +2293,20 @@ function renderPainelEmergencia() {
   if (boxMat) {
     let cateter = "22G (Azul) a 20G (Rosa)";
     let agulhaIO = "Agulha 20G a 18G (ou Biópsia Medular)";
-    let tuboET = `${Math.max(2.0, Math.min(9.0, +(Math.sqrt(kg) * 1.6).toFixed(1)))} mm ${semCuff ? "(SEM CUFF)" : "(Com Cuff)"}`;
+    let tuboET = `${Math.max(2.0, Math.min(12.0, +(Math.sqrt(kg) * 1.6).toFixed(1)))} mm ${semCuff ? "(SEM CUFF)" : "(Com Cuff)"}`;
     let sondaGav = "Sonda nº 10 Fr a 14 Fr";
 
-    if (g < 80) {
+    if (isAnf) {
+      cateter  = "Banho Ringer Anfíbio / ICe (Agulha 25G–27G)";
+      agulhaIO = "Acesso Saco Linfático Dorsal ou ICe caudal";
+      tuboET   = "Cateter 16G–20G adaptado (SEM CUFF) — pele úmida";
+      sondaGav = "Sonda Uretral macia nº 4–6 Fr (lubrificada c/ água declorada)";
+    } else if (kg > 45) {
+      cateter  = kg > 150 ? "14G (Laranja) a 16G (Cinza) — Jugular" : "16G (Cinza) a 18G (Verde)";
+      agulhaIO = t.id === "Ratitas" ? "Acesso IV Jugular/Metatarsal (IM na coxa!)" : "Acesso IV Jugular / Cefálica (Grandes)";
+      tuboET   = t.id === "Ratitas" ? "10 a 16 mm (SEM CUFF — anéis completos)" : (kg > 200 ? "18 a 26 mm (Equino/Grande porte)" : "10 a 16 mm (Com Cuff)");
+      sondaGav = (t.id === "Equideos" || t.id === "Tapiridae") ? "Sonda Nasogástrica (11–16 mm)" : "Sonda Orogástrica / Ruminal calibrosa";
+    } else if (g < 80) {
       cateter  = "26G (Roxo) ou Escalpe 27G";
       agulhaIO = `Agulha 25G–26G (${isAve ? "Ulna distal / Tibiotarso" : "Tíbia / Fêmur"})`;
       tuboET   = "Cateter IV 18G–14G adaptado (SEM CUFF)";
@@ -2074,7 +2340,7 @@ function renderPainelEmergencia() {
     gridEm.innerHTML = DROGAS_EMERGENCIA_DB.map(d => {
       let dose = d.dosePadrao;
       if (isAve && d.doseAves !== undefined) dose = d.doseAves;
-      if (t.id === "Gato" && d.doseGato !== undefined) dose = d.doseGato;
+      if (isFelino && d.doseGato !== undefined) dose = d.doseGato;
       const ml = (kg * dose) / d.conc;
       const sem = corSemanticaClasse(d.cor);
       return `<div class="vc-subcard p-3 vc-accent-left-${sem} flex flex-col justify-between gap-2">
@@ -2152,6 +2418,12 @@ const MONOGRAFIAS_EXTRA = {
     ],
     notasTaxon: {
       Gato: "Dose de ataque 0,1 mg/kg no Dia 1, reduzindo para 0,05 mg/kg SID; contraindicado na DRC descompensada.",
+      FelideosSilv: "Mesmo cuidado de felinos domésticos (0,1 mg/kg ataque -> 0,05 mg/kg SID; evitar em desidratados/nefropatas).",
+      Equideos: "0,6 mg/kg IV ou VO SID (perfil GI/renal superior à fenilbutazona).",
+      Tapiridae: "0,6 mg/kg IV/IM/VO SID (extrapolação segura de perissodáctilos).",
+      Cervideos: "0,5 mg/kg IV/SC q24–48h.",
+      BovideosSilv: "0,5 mg/kg IV/SC q24–48h.",
+      Camelideos: "0,5 mg/kg IV/SC q24–48h.",
       Gamba: "Seguro a 0,1–0,2 mg/kg SID por no máximo 3 dias (alto risco de úlcera gástrica em uso prolongado).",
       Coelhos: "Metabolismo hepático ultrarrápido: usar 0,5–1,0 mg/kg q12–24h.",
       Caviomorfos: "Depuração rápida; usar 0,5 mg/kg q12–24h com boa hidratação.",
@@ -2196,7 +2468,7 @@ const MONOGRAFIAS_EXTRA = {
     ],
     notasTaxon: {
       Gato: "Nunca ultrapassar 5 mg/kg SID; evitar em idosos/nefropatas/desidratados (preferir Marbofloxacina).",
-      CarnivorosSilv: "Em felídeos silvestres (Leopardus/Puma), aplicar a mesma restrição retiniana do gato doméstico."
+      FelideosSilv: "Mesma restrição retiniana do gato doméstico (defeito ABCG2): nunca ultrapassar 5 mg/kg SID; preferir Marbofloxacina."
     }
   },
   "Clindamicina": {
@@ -2293,10 +2565,13 @@ const CLASSES_PADRAO_FARMACO = {
 };
 
 function alternarSubFontes(qual) {
+  subFontesAtiva = qual;
   ["bulario", "livros", "extrator"].forEach(k => {
     document.getElementById(`painel-${k}`)?.classList.toggle("hidden", k !== qual);
     document.getElementById(`subf-${k}`)?.classList.toggle("active", k === qual);
   });
+  renderizarAbaVisivel();
+  if (!restaurandoEstado) agendarAutoSave();
 }
 
 function renderBularioCompleto() {
@@ -2305,13 +2580,13 @@ function renderBularioCompleto() {
   const termo = normalizarTextoBusca(document.getElementById("busca-bulario")?.value || "");
   const filtrados = FARMACOS_DB.filter(f => {
     const cls = MONOGRAFIAS_EXTRA[f.id]?.classe || CLASSES_PADRAO_FARMACO[f.id] || "";
-    return normalizarTextoBusca(f.nome + " " + f.comercial + " " + f.resumoBulario + " " + cls).includes(termo);
+    return (f._idxFull || normalizarTextoBusca(f.nome + " " + f.comercial + " " + f.resumoBulario + " " + cls)).includes(termo);
   });
 
   box.innerHTML = filtrados.map(f => {
     const fIdx = FARMACOS_DB.indexOf(f);
     const cls = MONOGRAFIAS_EXTRA[f.id]?.classe || CLASSES_PADRAO_FARMACO[f.id] || "";
-    return `<div onclick="abrirFichaCompletaFarmaco(${fIdx})" class="vc-card-interactive p-3.5 space-y-1.5">
+    return `<div onclick="abrirFichaCompletaFarmaco(${fIdx})" class="vc-card-interactive vc-perf-item p-3.5 space-y-1.5">
       <div class="flex justify-between items-start gap-2">
         <strong class="text-xs sm:text-sm vc-text">${escapeHtml(f.nome)}</strong>
         <span class="vc-badge vc-badge-accent shrink-0">Ficha</span>
@@ -2365,23 +2640,44 @@ function getMotivoBloqueioGenerico(f, t) {
   if (f.id === "Fenbendazol" && (t.id === "Columbiformes" || t.id === "Cathartiformes")) {
     return "Proibido: causa aplasia letal de medula óssea, leucopenia fulminante e necrose de criptas intestinais (Carpenter 6ª ed., p. 263).";
   }
-  if (f.id === "Ivermectina" && t.id === "Testudines") {
-    return "100% letal em quelônios: atravessa a barreira hematoencefálica causando paralisia flácida irreversível (Carpenter 6ª ed., p. 117).";
+  if (f.id === "Ivermectina" && (t.id === "Testudines" || t.id === "TestudinesMarinhos")) {
+    return "100% letal em quelônios terrestres e marinhos: atravessa a barreira hematoencefálica causando paralisia flácida irreversível (Carpenter 6ª ed., p. 117).";
   }
-  if ((f.id === "Prednisolona" || f.id === "Dexametasona") && (t.id === "Coelhos" || t.id === "Caviomorfos" || t.grupo.includes("Répteis"))) {
-    return "Contraindicado: imunossupressão severa, disbiose fatal e úlceras gastrintestinais nesta espécie.";
+  if (f.id === "Ivermectina" && t.id === "Crocodilianos") {
+    return "Contraindicado em crocodilianos: relatos de neurotoxicidade e paresia (usar Fenbendazol 50 mg/kg — Carpenter 6ª ed., p. 117).";
+  }
+  if ((f.id === "Prednisolona" || f.id === "Dexametasona") && (t.id === "Coelhos" || t.id === "Caviomorfos" || t.grupo.includes("Répteis") || t.grupo.includes("Anfíbios"))) {
+    return "Contraindicado: imunossupressão severa, disbiose fatal, infecções fúngicas oportunistas e úlceras gastrintestinais nesta espécie.";
+  }
+  if (f.id === "Carprofeno" && (t.id === "Gato" || t.id === "FelideosSilv")) {
+    return "Evitar uso repetido em felinos domésticos e silvestres pela eliminação errática e toxicidade renal/GI (preferir Meloxicam ou Robenacoxibe — Plumb's 10ª ed.).";
   }
   if (f.id === "Carprofeno" && t.id === "Cathartiformes") {
     return "100% letal em urubus: induz necrose tubular renal aguda e gota visceral em 24–48h (usar apenas Meloxicam).";
   }
-  if (f.id === "Metadona" && t.id === "Serpentes") {
-    return "Baixa eficácia analgésica isolada em serpentes (preferir Tramadol + bloqueio local).";
+  if (f.id === "Doxiciclina" && (t.id === "Equideos" || t.id === "Tapiridae")) {
+    return "Evitar em equídeos/antas: risco de colite por desequilíbrio cecocólico (e aplicação IV é estritamente proibida por causar arritmia/morte súbita!).";
   }
-  if (f.id === "Escopolamina" && (t.grupo.includes("Aves") || t.grupo.includes("Répteis"))) {
-    return "Não indicado na rotina de aves e répteis (risco de estase GI/ingluvial e espessamento de secreções).";
+  if (f.id === "Metoclopramida" && (t.id === "Equideos" || t.id === "Tapiridae")) {
+    return "Contraindicado na rotina de equídeos/antas pelo alto risco de excitação extrapiramidal e cólica espástica (Equine Medicine Secrets).";
   }
-  if (f.id === "Pentabiotico" && (t.id === "Miomorfos" || t.grupo.includes("Répteis"))) {
+  if ((f.id === "Lidocaina 2%" || f.id === "Bupivacaina 0,5%") && t.grupo.includes("Anfíbios")) {
+    return "Evitar anestésicos locais convencionais pela rápida absorção sistêmica cutânea/toxicidade em anfíbios (preferir banho de MS-222 tamponado — Carpenter 6ª ed.).";
+  }
+  if (f.id === "Metadona" && (t.id === "Serpentes" || t.grupo.includes("Anfíbios"))) {
+    return "Baixa eficácia ou dados limitados nesta ordem (em serpentes e anfíbios, preferir Tramadol).";
+  }
+  if (f.id === "Escopolamina" && (t.grupo.includes("Aves") || t.grupo.includes("Répteis") || t.grupo.includes("Anfíbios"))) {
+    return "Não indicado na rotina de aves, répteis e anfíbios (risco de estase GI/ingluvial e espessamento de secreções).";
+  }
+  if (f.id === "Pentabiotico" && (t.id === "Miomorfos" || t.grupo.includes("Répteis") || t.grupo.includes("Anfíbios"))) {
     return "Contraindicado: risco elevado de nefrotoxicidade/bloqueio neuromuscular pela Estreptomicina e toxicidade da Procaína.";
+  }
+  if (t.grupo.includes("Anfíbios")) {
+    return "Não recomendado na rotina de anfíbios ou sem respaldo farmacocinético seguro nesta ordem (Carpenter 6ª ed., Cap. Amphibians).";
+  }
+  if (t.id === "Cervideos" || t.id === "BovideosSilv" || t.id === "Camelideos") {
+    return "Não indicado ou contraindicado na rotina de ruminantes/camelídeos adultos (risco de disbiose ruminal ou ausência de indicação clínica).";
   }
   return "Contraindicado ou não recomendado para este táxon.";
 }
@@ -2621,7 +2917,7 @@ function renderTabelaPosologiaFicha() {
     const leftCls = l.sit === "proibido" ? "vc-accent-left-danger" : (l.sit === "cautela" ? "vc-accent-left-warn" : (isAtual ? "vc-accent-left-accent" : ""));
 
     return `
-      <div class="vc-card p-3.5 ${leftCls} space-y-2">
+      <div class="vc-card vc-perf-item p-3.5 ${leftCls} space-y-2">
         <div class="flex flex-wrap items-center justify-between gap-1.5">
           <div class="flex flex-wrap items-center gap-1.5">
             <strong class="text-xs sm:text-sm vc-text">${escapeHtml(limparEmoji(l.t.nome))}</strong>
@@ -2659,7 +2955,7 @@ function renderCatalogoLivros() {
   if (!box) return;
   const termo = normalizarTextoBusca(document.getElementById("busca-livros")?.value || "");
   const driveGeral = localStorage.getItem(KEY_DRIVE_URL) || "";
-  const filtrados = CATALOGO_LIVROS.filter(l => normalizarTextoBusca(l.titulo + " " + l.autores + " " + l.area + " " + l.resumo).includes(termo));
+  const filtrados = CATALOGO_LIVROS.filter(l => (l._idx || normalizarTextoBusca(l.titulo + " " + l.autores + " " + l.area + " " + l.resumo)).includes(termo));
 
   box.innerHTML = filtrados.map(l => `
     <div class="vc-subcard p-3.5 flex flex-col justify-between gap-2">
@@ -2738,17 +3034,30 @@ function atualizarUIConta(user) {
   }
 }
 
+async function aplicarPersistenciaAuth() {
+  const manter = document.getElementById("auth-manter")?.checked !== false;
+  localStorage.setItem(KEY_AUTH_PERS, manter ? "local" : "session");
+  const modo = manter
+    ? firebase.auth.Auth.Persistence.LOCAL
+    : firebase.auth.Auth.Persistence.SESSION;
+  await firebase.auth().setPersistence(modo);
+}
+
 async function entrarComEmailSenha() {
   const email = (document.getElementById("auth-email")?.value || "").trim();
   const senha = document.getElementById("auth-senha")?.value || "";
   if (!email || !senha) return mostrarErroAuth("Preencha e-mail e senha.");
-  if (typeof firebase === "undefined" || !firebase.apps?.length) return mostrarErroAuth("Aguarde a conexão com o servidor.");
+  if (typeof firebase === "undefined") return mostrarErroAuth("Conecte-se à internet para entrar.");
+  initFirebaseVetCore();
+  if (!firebase.apps?.length) return mostrarErroAuth("Aguarde a conexão com o servidor.");
 
   mostrarErroAuth("");
   try {
+    await aplicarPersistenciaAuth();
+    localStorage.setItem(KEY_AUTH_EMAIL, email);
     await firebase.auth().signInWithEmailAndPassword(email, senha);
     document.getElementById("modal-admin")?.classList.add("hidden");
-    showToast("Conta conectada. Sincronizando dados...", "ok");
+    showToast("Conta conectada. Login salvo neste dispositivo.", "ok");
   } catch (err) {
     mostrarErroAuth(traduzirErroFirebase(err.code, err.message));
   }
@@ -2758,10 +3067,14 @@ async function criarContaEmailSenha() {
   const email = (document.getElementById("auth-email")?.value || "").trim();
   const senha = document.getElementById("auth-senha")?.value || "";
   if (!email || senha.length < 6) return mostrarErroAuth("Informe um e-mail válido e senha com no mínimo 6 caracteres.");
-  if (typeof firebase === "undefined" || !firebase.apps?.length) return mostrarErroAuth("Aguarde a conexão com o servidor.");
+  if (typeof firebase === "undefined") return mostrarErroAuth("Conecte-se à internet para criar conta.");
+  initFirebaseVetCore();
+  if (!firebase.apps?.length) return mostrarErroAuth("Aguarde a conexão com o servidor.");
 
   mostrarErroAuth("");
   try {
+    await aplicarPersistenciaAuth();
+    localStorage.setItem(KEY_AUTH_EMAIL, email);
     const cred = await firebase.auth().createUserWithEmailAndPassword(email, senha);
     const nomeEmit = document.getElementById("emit-nome")?.value?.trim();
     if (nomeEmit && cred.user) await cred.user.updateProfile({ displayName: nomeEmit });
@@ -2775,7 +3088,8 @@ async function criarContaEmailSenha() {
 async function recuperarSenhaEmail() {
   const email = (document.getElementById("auth-email")?.value || "").trim();
   if (!email) return mostrarErroAuth("Digite seu e-mail acima para receber o link de redefinição.");
-  if (typeof firebase === "undefined" || !firebase.apps?.length) return mostrarErroAuth("Aguarde a conexão com o servidor.");
+  if (typeof firebase === "undefined") return mostrarErroAuth("Conecte-se à internet para redefinir a senha.");
+  initFirebaseVetCore();
 
   try {
     await firebase.auth().sendPasswordResetEmail(email);
@@ -2787,11 +3101,20 @@ async function recuperarSenhaEmail() {
 }
 
 async function logoutContaGoogle() {
+  localStorage.removeItem(KEY_AUTH_HINT);
   if (typeof firebase !== "undefined" && firebase.apps?.length) {
     await firebase.auth().signOut();
   }
   atualizarUIConta(null);
   showToast("Sessão encerrada.", "info");
+}
+
+function agendarSincronizacaoNuvem() {
+  if (!firestoreDb || !firebaseUserAtual) return;
+  clearTimeout(_timerCloudSync);
+  _timerCloudSync = setTimeout(() => {
+    sincronizarParaNuvem();
+  }, 4000);
 }
 
 async function sincronizarParaNuvem() {
@@ -2806,29 +3129,312 @@ async function sincronizarParaNuvem() {
   } catch (e) {}
 }
 
+// Merge inteligente por ID: nunca apaga pacientes criados offline antes da sincronização
+function mesclarPacientesSeguro(locais, nuvem) {
+  const mapa = new Map();
+  (nuvem || []).forEach(p => { if (p && p.id) mapa.set(p.id, p); });
+  let houveLocalMaisNovo = false;
+  (locais || []).forEach(p => {
+    if (!p || !p.id) return;
+    const rem = mapa.get(p.id);
+    if (!rem) {
+      mapa.set(p.id, p);
+      houveLocalMaisNovo = true;
+    } else {
+      const tLoc = p.updatedAt || 0;
+      const tRem = rem.updatedAt || 0;
+      const hLoc = (p.historico || []).length;
+      const hRem = (rem.historico || []).length;
+      if (tLoc > tRem || (tLoc === tRem && hLoc > hRem)) {
+        mapa.set(p.id, p);
+        houveLocalMaisNovo = true;
+      }
+    }
+  });
+  return { lista: Array.from(mapa.values()), houveLocalMaisNovo };
+}
+
 async function baixarDadosDaNuvem(uid) {
   if (!firestoreDb) return;
   try {
     const doc = await firestoreDb.collection("vetcore_usuarios").doc(uid).get();
-    if (!doc.exists) return;
+    if (!doc.exists) {
+      if (pacientesSalvos.length > 0) sincronizarParaNuvem();
+      return;
+    }
     const d = doc.data();
 
     if (Array.isArray(d.pacientes)) {
-      pacientesSalvos = d.pacientes;
+      const { lista, houveLocalMaisNovo } = mesclarPacientesSeguro(pacientesSalvos, d.pacientes);
+      pacientesSalvos = lista;
       localStorage.setItem(KEY_PACIENTES, JSON.stringify(pacientesSalvos));
       atualizarListaPacientesSalvos();
+      if (houveLocalMaisNovo) sincronizarParaNuvem();
     }
     if (d.emitente && typeof d.emitente === "object") {
       localStorage.setItem(KEY_EMITENTE, JSON.stringify(d.emitente));
       if (d.emitente.nome && document.getElementById("emit-nome")) document.getElementById("emit-nome").value = d.emitente.nome;
       if (d.emitente.crmv && document.getElementById("emit-crmv")) document.getElementById("emit-crmv").value = d.emitente.crmv;
       if (d.emitente.end  && document.getElementById("emit-end"))  document.getElementById("emit-end").value  = d.emitente.end;
-      atualizarFolhaReceita();
+      if (abaAtiva === "receitas" && !receitaEditadaManual) atualizarFolhaReceita();
+      else dirtyViews.receitas = true;
     }
     if (d.sinaisCustom && typeof d.sinaisCustom === "object") {
-      localStorage.setItem(KEY_SINAIS_USR, JSON.stringify(d.sinaisCustom));
-      Object.assign(SINAIS_DB, d.sinaisCustom);
-      recalcularProntuario();
+      const localSinais = JSON.parse(localStorage.getItem(KEY_SINAIS_USR) || "{}");
+      const mergedSinais = Object.assign({}, d.sinaisCustom, localSinais);
+      localStorage.setItem(KEY_SINAIS_USR, JSON.stringify(mergedSinais));
+      Object.assign(SINAIS_DB, mergedSinais);
+      prepararIndicesBusca();
+      marcarViewsSujas(["resumo", "clinico", "ia"]);
+      renderizarAbaVisivel();
+    }
+  } catch (e) {}
+}
+
+// ============================================================================
+// MOTOR DE AUTO-SAVE EM TEMPO REAL & SOBREVIVÊNCIA EM SEGUNDO PLANO (ANDROID)
+// ============================================================================
+
+const CAMPOS_RASCUNHO_IDS = [
+  "p-nome", "p-raca", "p-sexo", "p-idade", "p-tutor", "p-contato", "p-status",
+  "p-anam", "p-temp", "p-des", "p-ecc", "p-fc", "p-fr", "p-mucosas", "p-tpc",
+  "p-exame-fisico", "p-ht", "p-ppt", "p-glic", "p-renal", "p-hep",
+  "p-complementares", "p-diagnostico",
+  "mcgs-motora", "mcgs-tronco", "mcgs-consc",
+  "fgs-orelhas", "fgs-olhos", "fgs-focinho", "fgs-bigodes", "fgs-cabeca",
+  "cmps-voc", "cmps-ferida", "cmps-palp", "cmps-post", "cmps-comp", "cmps-mob",
+  "rec-tipo", "rec-via-grupo", "rec-uso-tipo", "rec-nome-item",
+  "rec-embalagem", "rec-posologia", "rec-obs-italico"
+];
+
+function atualizarIndicadorAutoSave(ativo, salvando = false) {
+  const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  ["status-autosave-pront", "status-autosave-rec"].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!ativo) {
+      el.classList.add("hidden");
+      return;
+    }
+    el.classList.remove("hidden");
+    const dot = el.querySelector(".vc-autosave-dot");
+    const txt = el.querySelector("span:last-child");
+    if (dot) dot.classList.toggle("saving", salvando);
+    if (txt) txt.textContent = salvando ? "Salvando..." : `Salvo ${hora}`;
+  });
+}
+
+function capturarEstadoAtualRascunho() {
+  const campos = {};
+  CAMPOS_RASCUNHO_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) campos[id] = el.value;
+  });
+  return {
+    v: 1,
+    savedAt: Date.now(),
+    abaAtiva,
+    subProntuarioAtiva,
+    subCalcAtiva,
+    subFontesAtiva,
+    pacienteAtualId,
+    tIdx: parseInt(document.getElementById("g-tax")?.value) || 0,
+    tId: (TAXONS_DB[parseInt(document.getElementById("g-tax")?.value) || 0] || TAXONS_DB[0]).id,
+    subIdx: parseInt(document.getElementById("g-subesp")?.value) || 0,
+    peso: document.getElementById("g-peso")?.value || "1",
+    unid: unidPeso,
+    pesoMagro: pesoMagroManual,
+    sinais: Array.from(sinaisAtivos),
+    modoDocAtual,
+    itensReceitaAtual: itensReceitaAtual.slice(),
+    receitaEditadaManual,
+    receitaHtmlCustom: receitaEditadaManual ? (document.getElementById("print-area")?.innerHTML || "") : "",
+    campos
+  };
+}
+
+function salvarRascunhoAgora(silencioso = false) {
+  if (restaurandoEstado) return;
+  try {
+    const snap = capturarEstadoAtualRascunho();
+    localStorage.setItem(KEY_DRAFT, JSON.stringify(snap));
+
+    // Se estiver editando um paciente já cadastrado, atualiza os campos em segundo plano
+    // sem criar entradas duplicadas na Linha do Tempo
+    if (pacienteAtualId) {
+      const pac = pacientesSalvos.find(p => p.id === pacienteAtualId);
+      if (pac) {
+        const c = snap.campos;
+        pac.nome = (c["p-nome"] || "").trim() || pac.nome;
+        pac.tIdx = snap.tIdx;
+        pac.tId = snap.tId;
+        pac.subIdx = snap.subIdx;
+        pac.peso = snap.peso;
+        pac.unid = snap.unid;
+        pac.pesoMagro = snap.pesoMagro;
+        pac.raca = c["p-raca"] || "";
+        pac.sexo = c["p-sexo"] || pac.sexo;
+        pac.idade = c["p-idade"] || "";
+        pac.tutor = c["p-tutor"] || "";
+        pac.contato = c["p-contato"] || "";
+        pac.status = c["p-status"] || pac.status;
+        pac.anam = c["p-anam"] || "";
+        pac.exFis = c["p-exame-fisico"] || "";
+        pac.comp = c["p-complementares"] || "";
+        pac.diag = c["p-diagnostico"] || "";
+        pac.sinais = snap.sinais;
+        pac.temp = c["p-temp"] || "";
+        pac.des = c["p-des"] || "0";
+        pac.ecc = c["p-ecc"] || "0";
+        pac.fc = c["p-fc"] || "";
+        pac.fr = c["p-fr"] || "";
+        pac.mucosas = c["p-mucosas"] || "";
+        pac.tpc = c["p-tpc"] || "";
+        pac.ht = c["p-ht"] || "";
+        pac.ppt = c["p-ppt"] || "";
+        pac.glic = c["p-glic"] || "";
+        pac.renal = c["p-renal"] || "";
+        pac.hep = c["p-hep"] || "";
+        pac.itensReceita = snap.itensReceitaAtual;
+        pac.updatedAt = snap.savedAt;
+        localStorage.setItem(KEY_PACIENTES, JSON.stringify(pacientesSalvos));
+        agendarSincronizacaoNuvem();
+      }
+    }
+    if (!silencioso) atualizarIndicadorAutoSave(true, false);
+  } catch (e) {}
+}
+
+function agendarAutoSave() {
+  if (restaurandoEstado) return;
+  atualizarIndicadorAutoSave(true, true);
+  clearTimeout(_timerAutoSave);
+  _timerAutoSave = setTimeout(() => salvarRascunhoAgora(false), 350);
+}
+
+function restaurarRascunhoSessao() {
+  try {
+    const raw = localStorage.getItem(KEY_DRAFT);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (!d || typeof d !== "object") return false;
+
+    restaurandoEstado = true;
+
+    const selTax = document.getElementById("g-tax");
+    if (selTax) {
+      const idxPorId = d.tId ? TAXONS_DB.findIndex(x => x.id === d.tId) : -1;
+      if (idxPorId >= 0) selTax.value = String(idxPorId);
+      else if (d.tIdx !== undefined && TAXONS_DB[d.tIdx]) selTax.value = String(d.tIdx);
+    }
+    trocarGrupoTaxonomico();
+
+    const selSub = document.getElementById("g-subesp");
+    if (selSub && d.subIdx !== undefined) {
+      selSub.value = String(d.subIdx);
+    }
+
+    unidPeso = d.unid || "kg";
+    pesoMagroManual = d.pesoMagro || 0;
+    if (d.peso !== undefined && document.getElementById("g-peso")) {
+      document.getElementById("g-peso").value = d.peso;
+    }
+    atualizarBotoesUnidadeUI();
+
+    pacienteAtualId = d.pacienteAtualId || null;
+    sinaisAtivos = new Set(Array.isArray(d.sinais) ? d.sinais : []);
+    modoDocAtual = d.modoDocAtual || "receita";
+    itensReceitaAtual = Array.isArray(d.itensReceitaAtual) ? d.itensReceitaAtual : [];
+    receitaEditadaManual = Boolean(d.receitaEditadaManual);
+
+    if (d.campos && typeof d.campos === "object") {
+      Object.entries(d.campos).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined) el.value = val;
+      });
+    }
+
+    if (receitaEditadaManual && d.receitaHtmlCustom) {
+      const folha = document.getElementById("print-area");
+      if (folha) folha.innerHTML = d.receitaHtmlCustom;
+    }
+
+    ["receita", "alta", "encam"].forEach(k => {
+      document.getElementById(`btn-doc-${k}`)?.classList.toggle("active", k === modoDocAtual);
+    });
+
+    if (pacienteAtualId) {
+      const pac = pacientesSalvos.find(p => p.id === pacienteAtualId);
+      if (pac) renderTimelinePaciente(pac);
+    }
+    atualizarListaPacientesSalvos();
+    atualizarPillCabecalho();
+    marcarViewsSujas();
+
+    // Restaurar exatamente a aba e sub-aba onde o usuário estava
+    if (d.subProntuarioAtiva) subProntuarioAtiva = d.subProntuarioAtiva;
+    if (d.subCalcAtiva) subCalcAtiva = d.subCalcAtiva;
+    if (d.subFontesAtiva) subFontesAtiva = d.subFontesAtiva;
+
+    ["resumo", "clinico", "ia", "prescricao"].forEach(k => {
+      document.getElementById(`subp-${k}`)?.classList.toggle("hidden", k !== subProntuarioAtiva);
+      document.getElementById(`subp-btn-${k}`)?.classList.toggle("active", k === subProntuarioAtiva);
+    });
+    ["doses", "cri", "sedacao", "eutanasia"].forEach(k => {
+      document.getElementById(`subcalc-${k}`)?.classList.toggle("hidden", k !== subCalcAtiva);
+      document.getElementById(`subbtn-${k}`)?.classList.toggle("active", k === subCalcAtiva);
+    });
+    ["bulario", "livros", "extrator"].forEach(k => {
+      document.getElementById(`painel-${k}`)?.classList.toggle("hidden", k !== subFontesAtiva);
+      document.getElementById(`subf-${k}`)?.classList.toggle("active", k === subFontesAtiva);
+    });
+
+    mudarAba(d.abaAtiva || "prontuario");
+    atualizarIndicadorAutoSave(true, false);
+    restaurandoEstado = false;
+    return true;
+  } catch (e) {
+    restaurandoEstado = false;
+    return false;
+  }
+}
+
+function configurarAutoSaveEBackground() {
+  // 1. Escuta delegada em todos os campos de prontuário, receita e bottom sheet do paciente
+  const onEdit = (ev) => {
+    const id = ev.target?.id || "";
+    if (!id) return;
+    if (id === "print-area") {
+      receitaEditadaManual = true;
+      agendarAutoSave();
+      return;
+    }
+    if (id.startsWith("p-") || id.startsWith("rec-") || id.startsWith("mcgs-") || id.startsWith("fgs-") || id.startsWith("cmps-") || id === "g-peso" || id === "g-tax" || id === "g-subesp") {
+      agendarAutoSave();
+    }
+  };
+
+  document.addEventListener("input", onEdit, { passive: true });
+  document.addEventListener("change", onEdit, { passive: true });
+
+  // 2. Gravação síncrona imediata ao ir para segundo plano (WhatsApp, Câmera, Bloqueio de Tela)
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      clearTimeout(_timerAutoSave);
+      salvarRascunhoAgora(true);
+    }
+  });
+  window.addEventListener("pagehide", () => salvarRascunhoAgora(true));
+  window.addEventListener("beforeunload", () => salvarRascunhoAgora(true));
+  window.addEventListener("blur", () => salvarRascunhoAgora(true));
+
+  // 3. Hook nativo do Capacitor Android (se disponível no APK)
+  try {
+    const capApp = window.Capacitor?.Plugins?.App;
+    if (capApp && typeof capApp.addListener === "function") {
+      capApp.addListener("appStateChange", ({ isActive }) => {
+        if (!isActive) salvarRascunhoAgora(true);
+      });
     }
   } catch (e) {}
 }
