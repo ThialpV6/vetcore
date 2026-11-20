@@ -213,7 +213,36 @@ function initFirebaseVetCore() {
   }
 }
 
+function aplicarSafeAreaMobileFallback() {
+  try {
+    const cap = window.Capacitor;
+    const isAndroidNative = Boolean(
+      cap && (
+        (typeof cap.getPlatform === "function" && cap.getPlatform() === "android") ||
+        (typeof cap.isNativePlatform === "function" && cap.isNativePlatform() && /Android/i.test(navigator.userAgent))
+      )
+    );
+    if (!isAndroidNative) return;
+
+    const probe = document.createElement("div");
+    probe.style.cssText = "position:fixed;top:0;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);";
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    const topPx = parseFloat(cs.paddingTop) || 0;
+    const botPx = parseFloat(cs.paddingBottom) || 0;
+    probe.remove();
+
+    if (topPx < 10) {
+      document.documentElement.style.setProperty("--safe-top", "36px");
+    }
+    if (botPx < 4) {
+      document.documentElement.style.setProperty("--safe-bottom", "14px");
+    }
+  } catch (e) {}
+}
+
 function initVetCore() {
+  aplicarSafeAreaMobileFallback();
   aplicarTema(localStorage.getItem(KEY_THEME) || "dark");
   prepararIndicesBusca();
 
@@ -1031,18 +1060,27 @@ function atualizarAlertasEscalasTaxon() {
   if (!alertaEl) return;
   const { t } = getTaxonAtual();
   const nome = limparEmoji(t.nome);
+  const avisos = [];
+
   if (t.grupo.includes("Aves") || t.grupo.includes("Répteis")) {
+    avisos.push(`<strong>Alerta em ${escapeHtml(nome)}:</strong> A íris possui musculatura estriada voluntária — o reflexo pupilar à luz (RPL) pode ser falseado e não deve ser interpretado isoladamente como lesão de tronco.`);
+  }
+  if (t.grupo.includes("Anfíbios")) {
+    avisos.push(`<strong>Alerta em ${escapeHtml(nome)}:</strong> A MCGS não é validada em anfíbios; avaliar reflexo de endireitamento, retração corneal/palpebral e respiração bucal em água declorada na POTZ.`);
+  }
+  if (t.id === "Apodiformes") {
+    avisos.push(`<strong>Torpor em ${escapeHtml(nome)}:</strong> Diferenciar coma/estupor de torpor noturno fisiológico (18–25 °C) ou hipoglicemia aguda (fornecer néctar 20% antes de fechar o prognóstico).`);
+  }
+  if (t.id === "Caprimulgiformes" || t.id === "Chiroptera") {
+    avisos.push(`<strong>Torpor / Heterotermia em ${escapeHtml(nome)}:</strong> Confirmar temperatura corporal e reaquecer gradualmente antes de fechar prognóstico neurológico.`);
+  }
+  if (t.id === "Gamba" || t.id === "Tamandua" || t.id === "Tatu" || t.id === "Diprotodontia") {
+    avisos.push(`<strong>Basotermia em ${escapeHtml(nome)}:</strong> Diferenciar estupor neurológico de basotermia fisiológica ou tanatose (confirmar temperatura corporal antes de fechar o escore).`);
+  }
+
+  if (avisos.length > 0) {
     alertaEl.classList.remove("hidden");
-    alertaEl.innerHTML = `<strong>Alerta em ${escapeHtml(nome)}:</strong> A íris possui musculatura estriada voluntária — o reflexo pupilar à luz (RPL) pode ser falseado e não deve ser interpretado isoladamente como lesão de tronco.`;
-  } else if (t.grupo.includes("Anfíbios")) {
-    alertaEl.classList.remove("hidden");
-    alertaEl.innerHTML = `<strong>Alerta em ${escapeHtml(nome)}:</strong> A MCGS não é validada em anfíbios; avaliar reflexo de endireitamento, retração corneal/palpebral e respiração bucal em água declorada na POTZ.`;
-  } else if (t.id === "Apodiformes") {
-    alertaEl.classList.remove("hidden");
-    alertaEl.innerHTML = `<strong>Alerta em ${escapeHtml(nome)}:</strong> Diferenciar coma/estupor de torpor noturno fisiológico (18–25 °C) ou hipoglicemia aguda (fornecer néctar 20% antes de fechar o prognóstico).`;
-  } else if (t.id === "Gamba" || t.id === "Tamandua" || t.id === "Tatu") {
-    alertaEl.classList.remove("hidden");
-    alertaEl.innerHTML = `<strong>Alerta em ${escapeHtml(nome)}:</strong> Diferenciar estupor neurológico de basotermia fisiológica ou tanatose (confirmar temperatura corporal antes de fechar o escore).`;
+    alertaEl.innerHTML = avisos.join("<br>");
   } else {
     alertaEl.classList.add("hidden");
   }
@@ -2678,6 +2716,12 @@ function getMotivoBloqueioGenerico(f, t) {
   }
   if (t.id === "Cervideos" || t.id === "BovideosSilv" || t.id === "Camelideos") {
     return "Não indicado ou contraindicado na rotina de ruminantes/camelídeos adultos (risco de disbiose ruminal ou ausência de indicação clínica).";
+  }
+  if (f.id === "Pentabiotico" && (t.id === "Chiroptera" || t.id === "Diprotodontia")) {
+    return "Evitar nesta ordem (microfauna como morcegos/petauros tem risco de superdosagem volumétrica, nefrotoxicidade da Estreptomicina e toxicidade da Procaína; preferir Amoxi+Clav ou Clindamicina).";
+  }
+  if (f.id === "Robenacoxibe" && t.grupo.includes("Aves")) {
+    return "Sem dados farmacocinéticos e de segurança validados nesta ordem aviária (preferir Meloxicam — Carpenter 6ª ed.).";
   }
   return "Contraindicado ou não recomendado para este táxon.";
 }

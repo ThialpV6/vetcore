@@ -635,3 +635,38 @@ details > summary::-webkit-details-marker {
 .vc-autosave-dot.saving {
   background-color: var(--warn);
 }
+
+/* ============================================================================
+   FIX MOBILE SAFE-AREA (ANDROID EDGE-TO-EDGE / NOTCH / BARRA DE GESTOS)
+   ============================================================================ */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+body {
+  padding-top: calc(64px + var(--safe-top)) !important;
+  padding-bottom: calc(88px + var(--safe-bottom)) !important;
+}
+
+header.vc-header {
+  padding-top: var(--safe-top);
+  height: calc(56px + var(--safe-top)) !important;
+}
+
+.vc-bottom-nav {
+  padding-bottom: var(--safe-bottom);
+}
+
+.vc-fullscreen-view .vc-header {
+  height: auto !important;
+  padding-top: calc(12px + var(--safe-top)) !important;
+}
+
+.vc-sheet {
+  padding-bottom: calc(20px + var(--safe-bottom)) !important;
+}
+
+#vc-toast-container {
+  bottom: calc(72px + var(--safe-bottom));
+}

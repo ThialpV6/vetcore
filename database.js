@@ -2270,3 +2270,226 @@ const NOVAS_DOSES_POR_FARMACO = {
     f.dosesPadrao = TAXONS_DB.map(t => mapa[t.id]);
   });
 })();
+// ============================================================================
+// EXPANSÃO TAXONÔMICA v1.7 (BLOCO D — +6 TÁXONS: 38 -> 44 GRUPOS TAXONÔMICOS)
+// Cuculiformes, Chiroptera, Caprimulgiformes, Charadriiformes, Picidae, Diprotodontia
+// ============================================================================
+
+TAXONS_DB.push(
+  // 38: Cuculiformes
+  {
+    id: "Cuculiformes", grupo: "Aves — Cuculiformes", nome: "🐦 Cuculiformes (Anu-preto, Anu-branco, Anu-coroca, Alma-de-gato)",
+    tMin: 39.5, tBasalMin: 40.0, tMax: 42.0, fluidoManut: 50, bolusChoque: 10, fatorK: 78, gavMax: 15,
+    tuboSangue: "Microtubo com Heparina de Lítio (Veia Jugular Direita ou Metatarsal Medial)",
+    vias: "VO (sonda lenta — SEM inglúvio verdadeiro!), SC (prega inguinal), IM (peitoral c/ Diluição 1:10 se < 150 g), IV (jugular direita, metatarsal medial), IO (ulna distal / tibiotarso)",
+    proibido: "⛔ Corticoides (aspergilose!), Pentabiótico, tubo traqueal com cuff e acesso IO em úmero/fêmur. ⚠️ Doses são EXTRAPOLADAS de aves não-passeriformes (Carpenter 6ª ed.): evitar AINEs não-seletivos e usar Fenbendazol apenas com coproparasitológico positivo e sem superdosagem!",
+    regraOuro: "1) NÃO possuem inglúvio (papo) verdadeiro (máx 10–15 mL/kg na gavagem lenta após normotermia!); 2) Aves altamente gregárias que conservam calor em grupo — isoladas na internação entram em hipotermia rapidamente (manter aquecimento estável 28–32 °C!); 3) Dieta insetívora/carnívora oportunista.",
+    subespecies: [
+      { nome: "Anu-preto (Crotophaga ani — 80 a 130 g)", peso: 105, unid: "g", alerta: "Termorregulação social: risco alto de hipotermia quando internado sozinho; manter aquecimento estável e dieta insetívora/hiperproteica." },
+      { nome: "Anu-branco (Guira guira — 110 a 170 g)", peso: 140, unid: "g", alerta: "Não possui inglúvio verdadeiro; gavagem lenta máx 10–15 mL/kg." },
+      { nome: "Anu-coroca (Crotophaga major — 140 a 200 g)", peso: 165, unid: "g", alerta: "" },
+      { nome: "Alma-de-gato (Piaya cayana — 95 a 130 g)", peso: 110, unid: "g", alerta: "Cauda muito longa e frágil — evitar gaiolas estreitas de grade (risco de quebra de retrizes)." }
+    ],
+    sedacao: [
+      { nome: "Sedação Segura p/ Manejo, Radiografia e Curativos (Extrapolada Aves)", drogas: [["Midazolam", 1.5], ["Butorfanol", 1.5]], via: "IM (peitoral — Diluição 1:10) ou Intranasal", obs: "Reversor: Flumazenil 0,05 mg/kg IM (Carpenter 6ª ed.)." },
+      { nome: "Contenção Química Curta", drogas: [["Cetamina", 12.0], ["Midazolam", 1.5]], via: "IM", obs: "Manter aquecimento controlado na recuperação." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (20 mg/kg) + Midazolam (2 mg/kg) IM peitoral", 20, 100, 2.0, 5],
+      etapa2: ["Propofol (10 mg/kg IV/IO) ou Isoflurano em máscara até apneia e arreflexia", 10, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV/IO) somente após plano anestésico profundo confirmado.", 1.0]
+    }
+  },
+  // 39: Chiroptera
+  {
+    id: "Chiroptera", grupo: "Mamíferos — Chiroptera", nome: "🦇 Morcegos (Frugívoros, Insetívoros e Hematófagos — Chiroptera)",
+    tMin: 20.0, tBasalMin: 35.5, tMax: 39.5, fluidoManut: 80, bolusChoque: 10, fatorK: 70, gavMax: 15,
+    tuboSangue: "Capilar Heparinizado / Microtubo Heparina de Lítio (Veia Propatagial/Cefálica ou Uropatagial — evitar coleta em morcegos < 20 g!)",
+    vias: "SC (interescapular — 1ª escolha p/ fluidos!), VO (seringa de insulina sem agulha), IM (peitoral/coxa em Diluição 1:10 ou 1:100), IV (propatagial/uropatagial)",
+    proibido: "⛔ PROIBIDO MANUSEIO SEM LUVAS DE COURO GROSSAS / EPI DE RAIVA (Vacinação pré-exposição obrigatória!). ⛔ Proibido fármacos concentrados puros (microfauna: usar Diluição 1:10 ou 1:100!), Pentabiótico e suturas sob tensão no patágio (necrose da membrana alar!).",
+    regraOuro: "Cubas (Cap. Chiroptera) / Carpenter 6ª ed.: 1) HETEROTERMIA / TORPOR FISIOLÓGICO: no frio/repouso a temperatura cai para 20–28 °C (não confundir com óbito; aquecer gradualmente a 30–32 °C ambiental!); 2) HIPOGLICEMIA FULMINANTE: oferecer gotas de água glicosada/suco diluído imediatamente em frugívoros; 3) Envolver o corpo em tecido macio durante o exame.",
+    subespecies: [
+      { nome: "Morcego-das-frutas (Artibeus lituratus — 55 a 80 g)", peso: 68, unid: "g", alerta: "🚨 EPI RAIVA OBRIGATÓRIO: Oferecer néctar/suco diluído na triagem (evita hipoglicemia) e usar Diluição 1:10." },
+      { nome: "Morcego-frugívoro Pequeno (Carollia / Sturnira — 15 a 30 g)", peso: 22, unid: "g", alerta: "🚨 MICROFAUNA (< 30 g): Usar obrigatoriamente Diluição 1:100 p/ injetáveis; coleta de sangue contraindicada pelo volume mínimo." },
+      { nome: "Morcego-insetívoro Urbano (Molossus / Tadarida / Myotis — 10 a 25 g)", peso: 16, unid: "g", alerta: "🚨 MICROFAUNA (< 25 g) + RAIVA: Espécie urbana frequente em quedas; avaliar fratura de rádio/metacarpos e rasgo de patágio." },
+      { nome: "Morcego-hematófago (Desmodus rotundus — 25 a 45 g)", peso: 35, unid: "g", alerta: "🚨 ALTO RISCO EPIDEMIOLÓGICO DE RAIVA: Seguir rigorosamente protocolo sanitário oficial / vigilância epidemiológica e EPI reforçado." }
+    ],
+    sedacao: [
+      { nome: "Sedação Leve / Analgesia (Preferir Isoflurano em Máscara!)", drogas: [["Midazolam", 0.5], ["Butorfanol", 0.5]], via: "SC ou IM (Diluição 1:10 / 1:100)", obs: "Carpenter 6ª ed. Em procedimentos de asa/patágio, Isoflurano em máscara oferece recuperação muito mais rápida e segura." }
+    ],
+    eutanasia: {
+      etapa1: ["Indução em câmara de Isoflurano ou Cetamina (25 mg/kg) + Midazolam (1 mg/kg) SC/IM (Diluição 1:10!)", 25, 100, 1.0, 5],
+      etapa2: ["Isoflurano em alta concentração ou Propofol (10 mg/kg IV/IP) até apneia e arreflexia profunda", 10, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV/IC) somente após confirmação absoluta de plano profundo.", 1.0]
+    }
+  },
+  // 40: Caprimulgiformes
+  {
+    id: "Caprimulgiformes", grupo: "Aves — Caprimulgiformes", nome: "🌙 Bacuraus, Curiangos e Urutaus (Caprimulgiformes)",
+    tMin: 28.0, tBasalMin: 39.5, tMax: 41.5, fluidoManut: 50, bolusChoque: 10, fatorK: 78, gavMax: 12,
+    tuboSangue: "Microtubo com Heparina de Lítio (Veia Jugular Direita ou Basílica — metatarsal muito curta/fina)",
+    vias: "SC (prega inguinal), IM (peitoral c/ Diluição 1:10), VO (EXTREMO CUIDADO com mandíbula frágil — sem papo!), IV (jugular direita), IO (ulna distal)",
+    proibido: "⛔ PROIBIDO forçar abertura do bico pela ponta (mandíbula laminar extremamente fina e frágil — fratura iatrogênica imediata!). ⛔ Proibido Corticoides, Pentabiótico, tubo traqueal com cuff e gaiolas de grade rígida (destroem rêmiges!).",
+    regraOuro: "Altíssima casuística de atropelamento noturno (TCE + trauma ocular!). 1) NÃO possuem inglúvio verdadeiro (gavagem máx 10–12 mL/kg); 2) Podem entrar em TORPOR FACULTATIVO (< 30 °C) no frio/jejum; 3) Insetívoros aéreos estritos: abrir o bico segurando suavemente pelas comissuras laterais e alojar em recinto acolchoado com paredes lisas/tecido.",
+    subespecies: [
+      { nome: "Bacurau / Curiango (Nyctidromus albicollis — 45 a 75 g)", peso: 58, unid: "g", alerta: "🚨 BICO LAMINAR FRÁGIL: Nunca puxar pela ponta! Usar Diluição 1:10 e avaliar fundo de olho/TCE." },
+      { nome: "Bacurau-tesoura / Pequeno (Hydropsalis / Chordeiles — 35 a 60 g)", peso: 45, unid: "g", alerta: "Risco extremo de lesão de penas em grades; manter em caixa acolchoada escura e silenciosa." },
+      { nome: "Urutau / Mãe-da-lua (Nyctibius griseus — 140 a 200 g)", peso: 170, unid: "g", alerta: "Fornecer tronco/poleiro grosso estável na reabilitação; alimentação manual delicada com insetos." }
+    ],
+    sedacao: [
+      { nome: "Sedação Segura p/ Exame Oftálmico, RX e Manejo", drogas: [["Midazolam", 1.5], ["Butorfanol", 1.5]], via: "IM (Diluição 1:10) ou Intranasal", obs: "Reduz estresse e risco de trauma de asa durante radiografias (Carpenter 6ª ed.)." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (20 mg/kg) + Midazolam (2 mg/kg) IM peitoral", 20, 100, 2.0, 5],
+      etapa2: ["Propofol (10 mg/kg IV/IO) ou Isoflurano até apneia e arreflexia", 10, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV/IO) após plano profundo.", 1.0]
+    }
+  },
+  // 41: Charadriiformes
+  {
+    id: "Charadriiformes", grupo: "Aves — Charadriiformes", nome: "🌊 Quero-quero, Gaivotas, Trinta-réis e Maçaricos (Charadriiformes)",
+    tMin: 39.5, tBasalMin: 40.0, tMax: 42.0, fluidoManut: 55, bolusChoque: 10, fatorK: 78, gavMax: 20,
+    tuboSangue: "Microtubo com Heparina de Lítio (Veia Metatarsal Medial ou Basílica)",
+    vias: "IV (metatarsal medial = excelente!, basílica, jugular direita), IO (ulna distal / tibiotarso), IM (peitoral), SC, VO",
+    proibido: "⛔ Corticoides (aspergilose em aves costeiras!), Pentabiótico, tubo com cuff inflado e piso rígido sem acolchoamento (pododermatite rápida!).",
+    regraOuro: "Cubas / Carpenter 6ª ed.: 1) QUERO-QUERO (Vanellus chilensis): possui ESPORÃO ÓSSEO CARPAL afiado nas asas (proteger mãos na contenção!) e pernas longas com alto risco de miopatia de captura; 2) GAIVOTAS E TRINTA-RÉIS: investigar botulismo, ingestão de anzol/chumbo (RX!), aspergilose e deficiência de tiamina (Vit. B1) em dieta com peixe congelado.",
+    subespecies: [
+      { nome: "Quero-quero (Vanellus chilensis — 250 a 360 g)", peso: 300, unid: "g", alerta: "🚨 ESPORÃO CARPAL AFIADO nas asas! Alto risco de fratura de tibiotarso e miopatia de captura." },
+      { nome: "Gaivotão / Gaivota (Larus dominicanus / Chroicocephalus — 650 g a 1.1 kg)", peso: 850, unid: "g", alerta: "Investigar botulismo ('pescoço mole'), anzóis/linhas de pesca e aspergilose; suplementar Vit. B1 em dieta com peixe descongelado." },
+      { nome: "Trinta-réis (Thalasseus / Sterna — 120 a 300 g)", peso: 200, unid: "g", alerta: "Aves marinhas pelágicas: proteger impermeabilização das penas e suplementar tiamina." },
+      { nome: "Batuíra / Maçarico (Charadrius / Calidris — 35 a 90 g)", peso: 55, unid: "g", alerta: "Microfauna: usar Diluição 1:10; piso macio para prevenir pododermatite." }
+    ],
+    sedacao: [
+      { nome: "Sedação Antiestresse p/ RX, Retirada de Anzol e Curativos", drogas: [["Midazolam", 1.5], ["Butorfanol", 1.5]], via: "IM ou IV (metatarsal medial)", obs: "Prevenção eficaz de miopatia de captura (Carpenter 6ª ed.)." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (15 mg/kg) + Midazolam (1.5 mg/kg) IM", 15, 100, 1.5, 5],
+      etapa2: ["Propofol (10 mg/kg IV na metatarsal medial) até apneia e arreflexia", 10, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV) após plano profundo.", 1.0]
+    }
+  },
+  // 42: Picidae
+  {
+    id: "Picidae", grupo: "Aves — Piciformes (Picidae)", nome: "🪵 Pica-paus (Pica-pau-do-campo, Birro, Pica-pau-verde)",
+    tMin: 40.0, tBasalMin: 40.5, tMax: 42.0, fluidoManut: 55, bolusChoque: 10, fatorK: 78, gavMax: 15,
+    tuboSangue: "Microtubo com Heparina de Lítio (Veia Jugular Direita ou Basílica)",
+    vias: "SC (prega inguinal), IM (peitoral c/ Diluição 1:10), VO (SEM inglúvio verdadeiro!), IV (jugular direita), IO (ulna distal)",
+    proibido: "⛔ Corticoides, Pentabiótico, tubo traqueal com cuff e recinto sem superfície/tronco vertical (pés zigodáctilos e cauda rígida precisam de apoio vertical!).",
+    regraOuro: "Alta casuística de colisão em vidraças (TCE!). 1) NÃO possuem inglúvio verdadeiro (gavagem máx 12–15 mL/kg); 2) Aparelho hioide e língua protrátil longa envolvem o crânio (cuidado ao examinar/sondar cavidade oral e avaliar trauma craniano!); 3) Diferente dos Tucanos (Ramphastidae), NÃO têm predisposição severa à hemocromatose; dieta insetívora.",
+    subespecies: [
+      { nome: "Pica-pau-do-campo (Colaptes campestris — 140 a 190 g)", peso: 160, unid: "g", alerta: "Muito comum em trauma por colisão/atropelamento; bico perfurante (conter cabeça com segurança)." },
+      { nome: "Pica-pau-branco / Birro (Melanerpes candidus — 100 a 135 g)", peso: 115, unid: "g", alerta: "Onívoro/insetívoro e frugívoro; não possui papo verdadeiro." },
+      { nome: "Pica-pau-pequeno / Picapauzinho (Veniliornis / Picumnus — 12 a 55 g)", peso: 35, unid: "g", alerta: "Microfauna: usar Diluição 1:10 ou 1:100 obrigatória." }
+    ],
+    sedacao: [
+      { nome: "Sedação Segura p/ Exame, RX e Manejo", drogas: [["Midazolam", 1.5], ["Butorfanol", 1.5]], via: "IM (peitoral) ou Intranasal", obs: "Carpenter 6ª ed. Associar Cetamina (10–12 mg/kg IM) ou Isoflurano para procedimentos dolorosos." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (20 mg/kg) + Midazolam (2 mg/kg) IM", 20, 100, 2.0, 5],
+      etapa2: ["Propofol (10 mg/kg IV/IO) ou Isoflurano até arreflexia", 10, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV/IO) após plano profundo.", 1.0]
+    }
+  },
+  // 43: Diprotodontia
+  {
+    id: "Diprotodontia", grupo: "Marsupiais — Diprotodontia (Exóticos)", nome: "🦘 Petauro-do-açúcar (Sugar Glider) & Canguru / Wallaby",
+    tMin: 34.0, tBasalMin: 35.5, tMax: 37.2, fluidoManut: 60, bolusChoque: 10, fatorK: 49, gavMax: 20,
+    tuboSangue: "Microtubo EDTA + Heparina (Petauro: Jugular/Cava Cranial sob Isoflurano; Canguru: Coccígea Lateral ou Safena)",
+    vias: "SC (interescapular — atenção ao patágio no Petauro!), VO, IM (quadríceps — Diluição 1:10 no Petauro!), IV (jugular/coccígea lateral), IO (tíbia/fêmur)",
+    proibido: "⛔ AINEs prolongados sem gastroproteção (risco de úlcera gástrica marsupial), superaquecimento (> 37,5 °C!) e Pentabiótico em microfauna (< 150 g). Em Petauros: PROIBIDO fármacos concentrados puros e jejum prolongado.",
+    regraOuro: "Marsupiais basoendotérmicos (K=49, T normal 35,5–37,0 °C — Carpenter 6ª ed.): 1) PETAURO-DO-AÇÚCAR: paresia de membros pélvicos quase sempre é Osteodistrofia Nutricional (DOM / hipocalcemia por dieta só de frutas!) — repor Cálcio + Vit. D3 + analgesia; alto risco de automutilação por dor/estresse (Gabapentina + colar adaptado); 2) CANGURU/WALLABY: risco elevado de Lumpy Jaw (Fusobacterium necrophorum → Clindamicina/Metronidazol) e Miopatia de Captura!",
+    subespecies: [
+      { nome: "Petauro-do-açúcar / Sugar Glider (Petaurus breviceps — 90 a 150 g)", peso: 115, unid: "g", alerta: "🚨 PETAURO: Investigar hipocalcemia/DOM em paresia pélvica; alto risco de automutilação sob dor/estresse; usar Diluição 1:10." },
+      { nome: "Wallaby / Canguru-de-Bennett (Notamacropus rufogriseus — 12 a 22 kg)", peso: 16.0, unid: "kg", alerta: "Risco elevado de Miopatia de Captura e Lumpy Jaw (osteomielite mandibular por anaeróbios → Clindamicina/Metronidazol)." },
+      { nome: "Canguru-vermelho / Cinza (Osphranter / Macropus — 30 a 75 kg)", peso: 45.0, unid: "kg", alerta: "🚨 SEGURANÇA: Chute pélvico potente! Conter com dardo IM (West 3ª ed.) e monitorar temperatura retal." }
+    ],
+    sedacao: [
+      { nome: "Sedação Analgésica Segura (Petauro: preferir Isoflurano em máscara!)", drogas: [["Midazolam", 0.5], ["Butorfanol", 0.4]], via: "IM ou SC", obs: "Carpenter 6ª ed. Em Wallaby/Canguru, associar Cetamina (5–10 mg/kg IM) conforme porte (West 3ª ed.)." }
+    ],
+    eutanasia: {
+      etapa1: ["Cetamina (15 mg/kg) + Midazolam (1 mg/kg) IM", 15, 100, 1.0, 5],
+      etapa2: ["Propofol (8 mg/kg IV na coccígea/jugular) até apneia e arreflexia", 8, 10],
+      etapa3: ["KCl 19,1% (1 mL/kg IV) após plano profundo.", 1.0]
+    }
+  }
+);
+
+// Referências Laboratoriais (LAB_REF_DB) para os 6 novos táxons
+Object.assign(LAB_REF_DB, {
+  Cuculiformes:     { ht:[40,54], ppt:[3.0,5.0], glic:[200,380], renalNome:"Ác. Úrico (mg/dL)", renal:[3.0,13.0], hepNome:"AST (U/L)", hep:[100,320], nota:"Referência extrapolada de aves não-passeriformes insetívoras/carnívoras (Campbell / Carpenter); uricotélicos — avaliar AST + CK em conjunto." },
+  Chiroptera:       { ht:[42,60], ppt:[5.0,7.8], glic:[70,180],  renalNome:"Creatinina (mg/dL)", renal:[0.3,1.2],  hepNome:"ALT (U/L)", hep:[15,110],  nota:"Morcegos (Cubas / Campbell): hematócrito fisiologicamente elevado (42–60%). Evitar coleta de sangue se peso < 20 g." },
+  Caprimulgiformes: { ht:[40,54], ppt:[2.8,4.8], glic:[200,380], renalNome:"Ác. Úrico (mg/dL)", renal:[3.0,13.0], hepNome:"AST (U/L)", hep:[100,320], nota:"Referência extrapolada de aves noturnas insetívoras (Campbell); uricotélicos — priorizar estabilização de TCE antes da coleta." },
+  Charadriiformes:  { ht:[38,54], ppt:[3.0,5.2], glic:[200,380], renalNome:"Ác. Úrico (mg/dL)", renal:[3.0,14.0], hepNome:"AST (U/L)", hep:[110,340], nota:"Charadriiformes (Campbell): avaliar AST + CK na suspeita de miopatia de captura em quero-queros e eletrólitos em aves costeiras." },
+  Picidae:          { ht:[42,56], ppt:[3.0,5.0], glic:[220,400], renalNome:"Ác. Úrico (mg/dL)", renal:[3.0,13.0], hepNome:"AST (U/L)", hep:[110,330], nota:"Pica-paus (Campbell): uricotélicos; coleta preferencial na jugular direita com microtubo heparinizado." },
+  Diprotodontia:    { ht:[40,56], ppt:[5.2,7.5], glic:[80,180],  renalNome:"Creatinina (mg/dL)", renal:[0.3,1.2],  hepNome:"ALT (U/L)", hep:[20,110],  nota:"Marsupiais Diprotodontia (Carpenter / Campbell): em petauros com paresia pélvica, avaliar obrigatoriamente Cálcio e relação Ca:P (DOM)!" }
+});
+
+// Particularidades XABCDE para os 6 novos táxons
+(function expandirXabcdeBlocoD() {
+  const etapas = PROTOCOLOS_MESTRES?.xabcde?.etapas || [];
+  const porLetra = l => etapas.find(e => e.letra === l)?.porTaxon;
+
+  const pA = porLetra("A");
+  if (pA) {
+    pA.Caprimulgiformes = "🚨 BICO LAMINAR EXTREMAMENTE FRÁGIL: Nunca forçar abertura pela ponta da mandíbula (abrir apenas pelas comissuras laterais)! Tubo sem cuff.";
+  }
+  const pE = porLetra("E");
+  if (pE) {
+    pE.Cuculiformes = "Aves gregárias (anus): isoladas perdem calor rapidamente — manter aquecimento estável (28–32 °C) em caixa escura e silenciosa.";
+    pE.Chiroptera = "🚨 BIOSSEGURANÇA RAIVA (luvas de couro obrigatórias!) + TORPOR FISIOLÓGICO (20–28 °C): reaquecer gradualmente e ofertar glicose/suco diluído em frugívoros.";
+    pE.Caprimulgiformes = "Diferenciar torpor facultativo (< 30 °C) de hipotermia grave; alojar em recinto acolchoado sem grades rígidas.";
+    pE.Charadriiformes = "Atenção ao esporão ósseo carpal nas asas do quero-quero e ao alto risco de miopatia de captura em membros longos.";
+    pE.Diprotodontia = "Basoendotérmicos (35,5–37,0 °C): não superaquecer acima de 37,5 °C; inspecionar marsúpio e patágio (petauros).";
+  }
+})();
+
+// Sincronização Nominal dos 38 Fármacos com os 6 Novos Táxons (Total: 44 Táxons!)
+(function sincronizarDosesBlocoD() {
+  const DOSES_BLOCO_D = {
+    "Amoxicilina+Clav":    { Cuculiformes:125,  Chiroptera:15,   Caprimulgiformes:125, Charadriiformes:125, Picidae:125,  Diprotodontia:15   },
+    "Clindamicina":        { Cuculiformes:100,  Chiroptera:11,   Caprimulgiformes:100, Charadriiformes:100, Picidae:100,  Diprotodontia:11   },
+    "Enrofloxacina":       { Cuculiformes:15,   Chiroptera:5,    Caprimulgiformes:15,  Charadriiformes:15,  Picidae:15,   Diprotodontia:5    },
+    "Marbofloxacina":      { Cuculiformes:10,   Chiroptera:4,    Caprimulgiformes:10,  Charadriiformes:10,  Picidae:10,   Diprotodontia:4    },
+    "Ceftazidima":         { Cuculiformes:75,   Chiroptera:25,   Caprimulgiformes:75,  Charadriiformes:75,  Picidae:75,   Diprotodontia:25   },
+    "Doxiciclina":         { Cuculiformes:35,   Chiroptera:5,    Caprimulgiformes:35,  Charadriiformes:35,  Picidae:35,   Diprotodontia:5    },
+    "Metronidazol":        { Cuculiformes:25,   Chiroptera:15,   Caprimulgiformes:25,  Charadriiformes:25,  Picidae:25,   Diprotodontia:15   },
+    "Dipirona":            { Cuculiformes:25,   Chiroptera:25,   Caprimulgiformes:25,  Charadriiformes:25,  Picidae:25,   Diprotodontia:25   },
+    "Meloxicam":           { Cuculiformes:1.0,  Chiroptera:0.2,  Caprimulgiformes:1.0, Charadriiformes:1.0, Picidae:1.0,  Diprotodontia:0.1  },
+    "Tramadol":            { Cuculiformes:10,   Chiroptera:2,    Caprimulgiformes:10,  Charadriiformes:10,  Picidae:10,   Diprotodontia:2    },
+    "Gabapentina":         { Cuculiformes:15,   Chiroptera:10,   Caprimulgiformes:15,  Charadriiformes:15,  Picidae:15,   Diprotodontia:10   },
+    "Butorfanol":          { Cuculiformes:1.5,  Chiroptera:0.5,  Caprimulgiformes:1.5, Charadriiformes:1.5, Picidae:1.5,  Diprotodontia:0.4  },
+    "Metadona":            { Cuculiformes:1.0,  Chiroptera:0.2,  Caprimulgiformes:1.0, Charadriiformes:1.0, Picidae:1.0,  Diprotodontia:0.2  },
+    "Midazolam":           { Cuculiformes:1.5,  Chiroptera:0.5,  Caprimulgiformes:1.5, Charadriiformes:1.5, Picidae:1.5,  Diprotodontia:0.5  },
+    "Cetamina":            { Cuculiformes:15,   Chiroptera:10,   Caprimulgiformes:15,  Charadriiformes:15,  Picidae:15,   Diprotodontia:10   },
+    "Maropitant":          { Cuculiformes:1.0,  Chiroptera:1.0,  Caprimulgiformes:1.0, Charadriiformes:1.0, Picidae:1.0,  Diprotodontia:1.0  },
+    "Furosemida":          { Cuculiformes:0.2,  Chiroptera:2.0,  Caprimulgiformes:0.2, Charadriiformes:0.2, Picidae:0.2,  Diprotodontia:2.0  },
+    "Nitenpiram":          { Cuculiformes:1.0,  Chiroptera:1.0,  Caprimulgiformes:1.0, Charadriiformes:1.0, Picidae:1.0,  Diprotodontia:1.0  },
+    "Manitol 20%":         { Cuculiformes:500,  Chiroptera:500,  Caprimulgiformes:500, Charadriiformes:500, Picidae:500,  Diprotodontia:500  },
+    "Vitamina K1":         { Cuculiformes:2.5,  Chiroptera:2.0,  Caprimulgiformes:2.5, Charadriiformes:2.5, Picidae:2.5,  Diprotodontia:2.0  },
+    "Carprofeno":          { Cuculiformes:2.0,  Chiroptera:2.0,  Caprimulgiformes:2.0, Charadriiformes:2.0, Picidae:2.0,  Diprotodontia:2.0  },
+    "Robenacoxibe":        { Cuculiformes:0,    Chiroptera:1.0,  Caprimulgiformes:0,   Charadriiformes:0,   Picidae:0,    Diprotodontia:1.0  },
+    "Prednisolona":        { Cuculiformes:0,    Chiroptera:0.5,  Caprimulgiformes:0,   Charadriiformes:0,   Picidae:0,    Diprotodontia:0.5  },
+    "Dexametasona":        { Cuculiformes:0,    Chiroptera:0.15, Caprimulgiformes:0,   Charadriiformes:0,   Picidae:0,    Diprotodontia:0.15 },
+    "Lidocaina 2%":        { Cuculiformes:1.5,  Chiroptera:2.0,  Caprimulgiformes:1.5, Charadriiformes:1.5, Picidae:1.5,  Diprotodontia:2.0  },
+    "Bupivacaina 0,5%":    { Cuculiformes:1.0,  Chiroptera:1.0,  Caprimulgiformes:1.0, Charadriiformes:1.0, Picidae:1.0,  Diprotodontia:1.0  },
+    "Ondansetrona":        { Cuculiformes:0.5,  Chiroptera:0.5,  Caprimulgiformes:0.5, Charadriiformes:0.5, Picidae:0.5,  Diprotodontia:0.5  },
+    "Metoclopramida":      { Cuculiformes:0.5,  Chiroptera:0.3,  Caprimulgiformes:0.5, Charadriiformes:0.5, Picidae:0.5,  Diprotodontia:0.3  },
+    "Omeprazol":           { Cuculiformes:1.0,  Chiroptera:1.0,  Caprimulgiformes:1.0, Charadriiformes:1.0, Picidae:1.0,  Diprotodontia:1.0  },
+    "Sucralfato":          { Cuculiformes:25,   Chiroptera:25,   Caprimulgiformes:25,  Charadriiformes:25,  Picidae:25,   Diprotodontia:25   },
+    "Itraconazol":         { Cuculiformes:10,   Chiroptera:5,    Caprimulgiformes:10,  Charadriiformes:10,  Picidae:10,   Diprotodontia:5    },
+    "Alopurinol":          { Cuculiformes:15,   Chiroptera:10,   Caprimulgiformes:15,  Charadriiformes:15,  Picidae:15,   Diprotodontia:10   },
+    "Ivermectina":         { Cuculiformes:0.2,  Chiroptera:0.2,  Caprimulgiformes:0.2, Charadriiformes:0.2, Picidae:0.2,  Diprotodontia:0.2  },
+    "Fenbendazol":         { Cuculiformes:20,   Chiroptera:25,   Caprimulgiformes:20,  Charadriiformes:20,  Picidae:20,   Diprotodontia:25   },
+    "Sulfametoxazol+Trim": { Cuculiformes:30,   Chiroptera:20,   Caprimulgiformes:30,  Charadriiformes:30,  Picidae:30,   Diprotodontia:20   },
+    "Cefalexina":          { Cuculiformes:50,   Chiroptera:22,   Caprimulgiformes:50,  Charadriiformes:50,  Picidae:50,   Diprotodontia:22   },
+    "Escopolamina":        { Cuculiformes:0,    Chiroptera:0.5,  Caprimulgiformes:0,   Charadriiformes:0,   Picidae:0,    Diprotodontia:0.5  },
+    "Pentabiotico":        { Cuculiformes:0,    Chiroptera:0,    Caprimulgiformes:0,   Charadriiformes:0,   Picidae:0,    Diprotodontia:0    }
+  };
+
+  FARMACOS_DB.forEach(f => {
+    const extras = DOSES_BLOCO_D[f.id] || {};
+    if (!f.dosesPorId) f.dosesPorId = {};
+    Object.assign(f.dosesPorId, extras);
+    f.dosesPadrao = TAXONS_DB.map(t => (f.dosesPorId[t.id] !== undefined ? f.dosesPorId[t.id] : 0));
+  });
+})();
